@@ -1,0 +1,294 @@
+syntax = "proto3";
+import "bossmarine.proto";
+package BLE;
+
+message Msg {
+    BM.Mac                   mac                  = 1;
+
+    oneof data{
+        DeviceInfoRequest      deviceInfoRequest      = 2;
+        DeviceInfoResponse     deviceInfoResponse     = 3;
+        WiFiConfigRequest      wifiConfigRequest      = 4;
+        WiFiConfigResponse     wifiConfigResponse     = 5;
+        WiFiStatusRequest      wifiStatusRequest      = 6;
+        WiFiStatusResponse     wifiStatusResponse     = 7;
+        RemoveDeviceRequest    removeDeviceRequest    = 8;
+        RemoveDeviceResponse   removeDeviceResponse   = 9;
+        WiFiScanRequest        wifiScanRequest        = 10;
+        WiFiScanResponse       wifiScanResponse       = 11;
+        PairRequest            pairRequest            = 12;
+        PairResponse           pairResponse           = 13;
+        PairConfirm            pairConfirm            = 14;
+        PairSyncRequest        pairSyncRequest        = 15;
+        PairSyncResponse       pairSyncResponse       = 16;
+        DeviceConfigRequest    deviceConfigRequest    = 17;
+        DeviceConfigResponse   deviceConfigResponse   = 18;
+        SyncDevice2Controller  syncDevice2Controller  = 19;
+        SyncController2Device  syncController2Device  = 20;
+        CheckForUpdateRequest  checkForUpdateRequest  = 21;
+        CheckForUpdateResponse checkForUpdateResponse = 22;
+        OtaUpdateRequest       otaUpdateRequest       = 23;
+        OtaUpdateResponse      otaUpdateResponse      = 24;
+        VersionRequest         versionRequest         = 26;
+        VersionResponse        versionResponse        = 27;
+        DispPairRequest        dispPairRequest        = 28;
+        DispPairResponse       dispPairResponse       = 29;
+
+        // Test
+        TestDataRepsonse testDataRepsonse = 254;
+        TestDataRequest testDataRequest   = 255;
+    }
+}
+
+// Get number of device
+message DeviceCountRequest {
+}
+message DeviceCountResponse {
+    uint32 max = 1;
+}
+
+// Get device info
+message DeviceInfoRequest {
+    BM.Mac mac = 1; // Target device MAC address
+}
+message DeviceInfoResponse {
+    uint32        remain  = 1; // Remain number of device will response
+    BM.DeviceType type    = 2; // Device type
+    BM.Mac        Mac     = 3; // Device Mac address
+    bool          online  = 5; // Device status
+    Result        result  = 6;
+
+    // Device data
+    oneof device {
+        BM.Hvac    hvac    = 7;
+        BM.Utility utility = 8;
+    }
+
+    enum Result {
+        UNKNOWN            = 0;
+        SUCCESS            = 1;
+        FAILURE            = 2;
+        ERROR_MAC_INVALID  = 3; // Error: Request device MAC invalid
+        ERROR_DEVICE_EMPTY = 4; // Error: Device list is emptry
+        ERROR_REQUESTED    = 5; // Error: On handle other requested
+        ERROR_NOT_EXISTED  = 6; // Error: Device info with MAC not existed
+    }
+}
+
+// Configuration WiFi connection
+message WiFiConfigRequest {
+    BM.WiFiConfig config = 1;
+}
+message WiFiConfigResponse {
+    Status status = 1;
+
+    enum Status {
+        UNKNOWN            = 0;
+        CONNECTED          = 1; // Success
+        ERROR_COMMON       = 2; // Error: common
+        ERROR_SSID_INVALID = 3; // Error: SSID invalid
+        ERROR_PASS_INVALID = 4; // Error: Password invalid
+        ERROR_REQUESTED    = 5; // Error: Requested
+        ERROR_DATA_INVALID = 6; // Error: data invalid
+    }
+}
+
+// Get WiFi connection status
+message WiFiStatusRequest {}
+message WiFiStatusResponse {
+    BM.WiFi status = 1;
+}
+
+
+// Remove device
+message RemoveDeviceRequest {
+    BM.Mac mac = 1;
+}
+message RemoveDeviceResponse {
+    Result result = 1;
+    enum Result {
+        UNKNOWN           = 0;
+        SUCCESS           = 1;
+        ERROR_COMMON      = 2; // Error: Common
+        ERROR_MAC_INVALID = 3; // Error: Mac invalid
+        ERROR_NOT_EXISTED = 4; // Error: device not existed
+        ERROR_REQUESTED   = 5; // Error: requested
+    }
+}
+
+// Configuration device
+message DeviceConfigRequest {
+    BM.Mac               mac     = 1;
+    oneof data {
+        BM.HvacConfig    hvac    = 2;
+        BM.UtilityConfig utility = 3;
+    }
+}
+message DeviceConfigResponse {
+    BM.Mac mac    = 1;
+    Result result = 2;
+
+    enum Result {
+        UNKNOWN           = 0;
+        SUCCESS           = 1;
+        ERROR_COMMON      = 2; // Error: Common
+        ERROR_REQUESTED   = 3; // Error: Requested.
+        ERROR_MAC_INVALID = 4; // Error: MAC address invalid.
+        ERROR_NOT_EXISTED = 5; // Error: Device not existed.
+    }
+}
+
+// WiFi STA scan request.
+message WiFiScanRequest{}
+message WiFiScanResponse {
+    BM.WiFiScan wifi   = 1;
+    Result      result = 2;
+    uint32      remain = 3;
+
+    enum Result{
+        UNKNOWN         = 0;
+        SUCCESS         = 1;
+        ERROR_COMMON    = 2;
+        ERROR_REQUESTED = 3; // Error: Busy for other scan
+        ERROR_TIMEOUT   = 4; // Error: scan timeout
+    }
+}
+
+// Send pair request from mobile to utility device
+message PairRequest {
+    BM.Mac        mac  = 1; // MAC address of device to add
+    BM.DeviceType type = 2; // Type of device to add. Incase add HVAC this type should be HOST.
+}
+
+// Response received the pair request and process result
+message PairResponse {
+    Result result = 1;
+    enum Result {
+        UNKNOWN                   = 0;
+        SUCCESS                   = 1;  // Success
+        ERROR_MAC_EMPTY           = 2;  // Error: MAC is empty 00:00:00:00:00:00
+        ERROR_MAC_INVALID         = 3;  // Error: MAC equal with current deviec MAC
+        ERROR_DEVICE_EXISTED      = 4;  // Error: MAC already added.
+        ERROR_DEVICE_FULL         = 5;  // Error: Device list is FULL.
+        ERROR_ADD_DEVICE          = 6;  // Error: Add device failure.
+        ERROR_REQUESTED           = 7;  // Error: Pair requested
+        ERROR_DEVICE_TYPE_INVALID = 8;  // Error: Device type invalid.
+        ERROR_TIMEOUT             = 9;  // Error: Pair device timeout: confirm or sync.
+        ERROR_DEVICE_TYPE         = 10; // Error: Device type invalid
+    }
+}
+
+// utility device response confirm
+message PairConfirm {
+    BM.Mac mac    = 1; // Controller MAC
+    Result result = 2;
+    enum Result {
+        UNKNOWN       = 0;
+        SUCCESS       = 1; // Success: Confirmed
+        ERROR_TIMEOUT = 2; // Error: confirm timeout
+        ERROR_COMMON  = 3; // Error: common
+    }
+}
+
+// Pair sync send to utility device.
+message PairSyncRequest {
+    BM.Mac mac = 1; // Pair device MAC
+}
+message PairSyncResponse {
+    Result result = 1;
+    enum Result {
+        UNKNOWN           = 0;
+        SUCCESS           = 1; // Succes
+        ERROR_REQUESTED   = 2; // Error: Pair not requested
+        ERROR_MAC_INVALID = 3; // Error: MAC invalid
+        ERROR_TIMEOUT     = 4; // Error: Timeout
+    }
+}
+
+message SyncDevice2Controller {
+    string version = 1;
+    oneof data{
+        BM.Hvac    hvac    = 2;
+        BM.Utility utility = 3;
+    }
+} 
+message SyncController2Device {
+    bool removed = 1;
+    string version = 2;
+    oneof data {
+        BM.Controller2Hvac    hvac    = 3;
+        BM.Controller2Utility utility = 4;
+    }
+}
+
+message CheckForUpdateRequest {
+    Result result  = 1;
+    enum Result {
+        ERROR_COMMON = 0;
+        SUCCESS = 1;
+        ERROR_REQUESTED = 2; // On Handle other request
+    }
+}
+
+message CheckForUpdateResponse {
+    Result result = 1;
+    enum Result{
+        ERROR_COMMON = 0;
+        FAILURE      = 1;
+        SUCCESS      = 2;
+    }
+}
+
+message OtaUpdateRequest {
+    bytes data = 1;
+    uint32 index = 2;
+    uint32 remain = 3;
+}
+
+message OtaUpdateResponse {
+    Result result = 1;
+    enum Result {
+        ERROR_COMMON = 0;
+        FAILURE = 1;
+        SUCCESS = 2;
+        ERROR_REQUESTED = 3; // Error: On Requested
+        ERROR_INIT_OTA = 4;  // Error: Start OTA failed
+        ERROR_WRITE = 5;  // Error: Write OTA failed
+    }
+}
+
+message VersionRequest{
+
+}
+message VersionResponse{
+    string firmware = 1;
+    string hardware = 2;
+}
+
+// Test data...
+message TestDataRequest {
+    uint32 temp = 1;
+    uint32 hum = 2;
+}
+message TestDataRepsonse {
+    Result result = 1;
+
+    enum Result {
+        UNKNOWN      = 0;
+        SUCCESS      = 1;
+        ERROR_COMMON = 2;   // Error: COMMON
+    }
+}
+
+message DispPairRequest {
+}
+
+message DispPairResponse {
+    Result result = 1;
+    enum Result {
+        SUCCESS               = 0;  // Success
+        ERROR_REQUESTED       = 1;  // Error pair has requested
+        ERROR_MAC_INVALID     = 2;  // Error MAC address invalid
+        ERROR_CONFIRM_TIMEOUT = 3;  // Error use confirm timeout
+    }
+}

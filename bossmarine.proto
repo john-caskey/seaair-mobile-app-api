@@ -1,0 +1,137 @@
+syntax = "proto3";
+package BM;
+
+message Version {
+    uint32 Major = 1;
+    uint32 Minor = 2;
+    uint32 Patch = 3;
+}
+
+message WiFiConfig {
+    string          ssid     = 1;
+    optional string password = 2;
+}
+
+enum DeviceType {
+    HOST               = 0;
+    HVAC               = 1;
+    UTILITY            = 2;
+    DISPLAY            = 3;
+    HVAC_CONTROLLER    = 4;
+}
+
+message Mac {
+    bytes addr = 1;
+}
+
+message Ip {
+    bytes ipv4 = 1;
+}
+
+enum Mode {
+    STANDBY  = 0;
+    COOL     = 1;
+    HEAT     = 2;
+    HUMIDITY = 3;
+    FAN      = 4;
+}
+
+message Budget {
+    bool   enabled  = 1; // Activate status
+    uint32 limit    = 2; // Limit power
+    uint32 duration = 3; // Duration time
+}
+
+message Fan {
+    uint32 speed    = 1;
+    bool   alwaysOn = 2;
+}
+
+message Compressor {
+    uint32 speed = 1;
+    State  state = 2;
+
+    enum State {
+        ON  = 0;
+        OFF = 1;
+    }
+}
+
+message Hvac {
+    HvacConfig config     = 1;
+    uint32     temperture = 2; // F
+    uint32     humidity   = 3; // %s
+    uint32     voltage    = 4; // mV
+    float      powerRate  = 5;
+    float      powerTotal = 6;
+}
+
+message Controller2Hvac {
+    HvacConfig config     = 1;
+}
+
+message Utility {
+    UtilityConfig config      = 1;
+    uint32        temperature = 2; // F
+    uint32        humidity    = 3; // %
+    uint32        battery     = 4; // %
+    uint32        voltage     = 5; // mV
+}
+
+message Controller2Utility {
+    UtilityConfig config = 1;
+
+}
+
+// WiFi connection info
+message WiFi {
+    string ssid   = 1; // WiFi Name
+    Mac    mac    = 2; // Mac address
+    int32 rssi   = 3; // Signal strength
+    Ip     ip     = 4; // IP address
+    Status status = 5;
+
+    enum Status {
+        DISCONNECTED = 0;
+        CONNECTED    = 1;
+        UNKNOWN      = 2;
+    }
+}
+
+message HvacConfig {
+    Budget          budget        = 1;
+    Fan             fan           = 2;
+    Mode            mode          = 3;
+    Compressor      compressor    = 4;
+    uint32          tempreature   = 5;
+    uint32          humidity      = 6;
+    optional string name          = 7;
+    optional uint64 controller_id = 8; // Unique controller board identifier from ESP eFuse MAC
+}
+
+message UtilityConfig {
+    uint32          sleep = 1; // Sleep period: sec
+    optional string name  = 2;
+}
+
+message WiFiScan{
+    optional string ssid = 1;
+    Auth            auth = 2;
+    int32           rssi = 3;
+
+    enum Auth {
+        option allow_alias = true;
+        OPEN            = 0; // Open
+        WEP             = 1; // WEP 
+        WPA_PSK         = 2; // WPA_PSK 
+        WPA2_PSK        = 3; // WPA2_PSK
+        WPA_WPA2_PSK    = 4; // WPA_WPA2_PSK
+        ENTERPRISE      = 5; // WiFi EAP security
+        WPA2_ENTERPRISE = 5; // WiFi EAP security 
+        WPA3_PSK        = 6; // WPA3_PSK
+        WPA2_WPA3_PSK   = 7; // WPA2_WPA3_PSK
+        WAPI_PSK        = 8; // WAPI_PSK
+        WPA3_ENT_192    = 9; // WPA3_ENT_SUITE_B_192_BIT
+        UNKNOWN         = 10;
+    }
+}
