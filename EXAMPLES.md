@@ -4,12 +4,69 @@ This document provides practical examples of how to use the SeaAir Mobile App AP
 
 ## Prerequisites
 
-1. Start the server:
+1. Configure AWS Cognito environment variables:
+   ```bash
+   export COGNITO_USER_POOL_ID="us-east-1_xxxxxxxxx"
+   export COGNITO_CLIENT_ID="xxxxxxxxxxxxxxxxxxxxxxxxxx"
+   export AWS_REGION="us-east-1"
+   ```
+
+2. Start the server:
    ```bash
    npm start
    ```
 
-2. The server will run on `http://localhost:3000` (or the port specified by the `PORT` environment variable)
+3. The server will run on `http://localhost:3000` (or the port specified by the `PORT` environment variable)
+
+4. Obtain a JWT token from AWS Cognito (see "Getting a Cognito Token" section below)
+
+## Getting a Cognito Token
+
+### Using AWS Amplify (Recommended for Mobile Apps)
+
+```javascript
+import { Auth } from 'aws-amplify';
+
+// Sign in
+const user = await Auth.signIn('username', 'password');
+
+// Get access token
+const session = await Auth.currentSession();
+const token = session.getAccessToken().getJwtToken();
+```
+
+### Using AWS CLI (For Testing)
+
+```bash
+# Authenticate and get token
+aws cognito-idp initiate-auth \
+  --auth-flow USER_PASSWORD_AUTH \
+  --client-id YOUR_CLIENT_ID \
+  --auth-parameters USERNAME=user@example.com,PASSWORD=YourPassword \
+  --region us-east-1 \
+  --query 'AuthenticationResult.AccessToken' \
+  --output text
+```
+
+### Using cURL (For Testing)
+
+```bash
+# Get token (requires Cognito USER_PASSWORD_AUTH flow enabled)
+TOKEN=$(curl -X POST \
+  -H "X-Amz-Target: AWSCognitoIdentityProviderService.InitiateAuth" \
+  -H "Content-Type: application/x-amz-json-1.1" \
+  -d '{
+    "AuthFlow": "USER_PASSWORD_AUTH",
+    "ClientId": "YOUR_CLIENT_ID",
+    "AuthParameters": {
+      "USERNAME": "user@example.com",
+      "PASSWORD": "YourPassword"
+    }
+  }' \
+  https://cognito-idp.us-east-1.amazonaws.com/ | jq -r '.AuthenticationResult.AccessToken')
+
+echo $TOKEN
+```
 
 ## Example 1: Controller Sending Heartbeat
 
@@ -35,19 +92,12 @@ Response:
 
 ## Example 2: Mobile App Sending Message to Controller
 
-First, generate a JWT token (in production, this would come from AWS Cognito):
+The mobile app must have a valid AWS Cognito JWT token:
 
 ```bash
-TOKEN=$(curl -s -X POST http://localhost:3000/test/generate-token \
-  -H "Content-Type: application/json" \
-  -d '{"userId": "user-xyz789"}' | jq -r '.token')
+# Use your Cognito token
+TOKEN="eyJraWQiOiJ..."  # Your actual Cognito access token
 
-echo $TOKEN
-```
-
-Then send a message to a controller:
-
-```bash
 curl -X POST http://localhost:3000/mobile/message \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $TOKEN" \

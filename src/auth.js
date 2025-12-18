@@ -1,17 +1,46 @@
 /**
- * JWT Authentication Middleware
- * Validates JWT tokens for mobile app routes
+ * AWS Cognito JWT Authentication Middleware
+ * Validates JWT tokens issued by AWS Cognito for mobile app routes
  */
 
-const jwt = require('jsonwebtoken');
+const { CognitoJwtVerifier } = require('aws-jwt-verify');
 
-// JWT secret - in production, this should be an environment variable
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+// AWS Cognito configuration from environment variables
+const COGNITO_USER_POOL_ID = process.env.COGNITO_USER_POOL_ID;
+const COGNITO_CLIENT_ID = process.env.COGNITO_CLIENT_ID;
+const AWS_REGION = process.env.AWS_REGION || 'us-east-1';
+
+// Create Cognito JWT verifier instance
+let verifier = null;
 
 /**
- * Middleware to verify JWT token
+ * Initialize the Cognito JWT verifier
+ * This is called lazily on first use to allow configuration at runtime
  */
-function verifyJWT(req, res, next) {
+function initializeVerifier() {
+  if (!COGNITO_USER_POOL_ID || !COGNITO_CLIENT_ID) {
+    throw new Error(
+      'AWS Cognito configuration missing. Please set COGNITO_USER_POOL_ID and COGNITO_CLIENT_ID environment variables.'
+    );
+  }
+
+  if (!verifier) {
+    verifier = CognitoJwtVerifier.create({
+      userPoolId: COGNITO_USER_POOL_ID,
+      tokenUse: 'access', // or 'id' depending on which token type you want to verify
+      clientId: COGNITO_CLIENT_ID,
+    });
+    
+    console.log(`[Auth] Cognito JWT verifier initialized for User Pool: ${COGNITO_USER_POOL_ID}, Region: ${AWS_REGION}`);
+  }
+  
+  return verifier;
+}
+
+/**
+ * Middleware to verify AWS Cognito JWT token
+ */
+async function verifyJWT(req, res, next) {
   const authHeader = req.headers.authorization;
 
   if (!authHeader) {
@@ -36,57 +65,68 @@ function verifyJWT(req, res, next) {
   const token = parts[1];
 
   try {
-    // Verify the token
-    const decoded = jwt.verify(token, JWT_SECRET);
+    // Initialize verifier if needed
+    const cognitoVerifier = initializeVerifier();
+    
+    // Verify the token against AWS Cognito
+    const payload = await cognitoVerifier.verify(token);
     
     // Attach decoded token to request for use in routes
-    req.auth = decoded;
+    // Cognito tokens have 'sub' as the unique user identifier
+    req.auth = {
+      sub: payload.sub,
+      username: payload.username || payload['cognito:username'],
+      email: payload.email,
+      ...payload
+    };
     
-    console.log(`[Auth] JWT verified for user: ${decoded.sub || decoded.userId || 'unknown'}`);
+    console.log(`[Auth] Cognito JWT verified for user: ${payload.sub} (${payload.username || payload['cognito:username'] || 'unknown'})`);
     
     next();
   } catch (error) {
-    console.log(`[Auth] JWT verification failed: ${error.message}`);
+    console.log(`[Auth] Cognito JWT verification failed: ${error.message}`);
     
-    if (error.name === 'TokenExpiredError') {
+    // Handle specific error cases
+    if (error.message.includes('Token expired')) {
       return res.status(401).json({ 
         error: 'Token expired',
-        message: 'JWT token has expired'
+        message: 'JWT token has expired. Please refresh your token.'
       });
     }
     
-    if (error.name === 'JsonWebTokenError') {
+    if (error.message.includes('Token use invalid')) {
       return res.status(401).json({ 
-        error: 'Invalid token',
-        message: 'JWT token is invalid'
+        error: 'Invalid token type',
+        message: 'Expected an access token from AWS Cognito'
+      });
+    }
+    
+    if (error.message.includes('configuration missing')) {
+      console.error('[Auth] AWS Cognito not configured. Check environment variables.');
+      return res.status(500).json({ 
+        error: 'Authentication service not configured',
+        message: 'Server authentication configuration is incomplete'
       });
     }
     
     return res.status(401).json({ 
       error: 'Authentication failed',
-      message: error.message
+      message: 'Invalid or malformed JWT token'
     });
   }
 }
 
 /**
- * Generate a JWT token (for testing purposes)
- * In production, this would be done by AWS Cognito
+ * Check if AWS Cognito is properly configured
  */
-function generateToken(userId, expiresIn = '24h') {
-  return jwt.sign(
-    { 
-      sub: userId,
-      userId: userId,
-      iss: 'seaair-api'
-    },
-    JWT_SECRET,
-    { expiresIn }
-  );
+function isCognitoConfigured() {
+  return !!(COGNITO_USER_POOL_ID && COGNITO_CLIENT_ID);
 }
 
 module.exports = {
   verifyJWT,
-  generateToken,
-  JWT_SECRET
+  isCognitoConfigured,
+  COGNITO_USER_POOL_ID,
+  COGNITO_CLIENT_ID,
+  AWS_REGION
 };

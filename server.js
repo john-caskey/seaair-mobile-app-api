@@ -9,7 +9,7 @@ const MessageQueue = require('./src/messageQueue');
 const RateLimiter = require('./src/rateLimiter');
 const controllerRoutes = require('./src/routes/controller');
 const mobileRoutes = require('./src/routes/mobile');
-const { generateToken } = require('./src/auth');
+const { isCognitoConfigured, COGNITO_USER_POOL_ID, AWS_REGION } = require('./src/auth');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -23,6 +23,14 @@ app.locals.messageQueue = new MessageQueue();
 app.locals.rateLimiter = new RateLimiter();
 
 console.log('[Server] Message queue and rate limiter initialized');
+
+// Check AWS Cognito configuration
+if (isCognitoConfigured()) {
+  console.log(`[Server] AWS Cognito configured - User Pool: ${COGNITO_USER_POOL_ID}, Region: ${AWS_REGION}`);
+} else {
+  console.warn('[Server] WARNING: AWS Cognito not configured. Set COGNITO_USER_POOL_ID and COGNITO_CLIENT_ID environment variables.');
+  console.warn('[Server] Mobile app authentication will fail until Cognito is configured.');
+}
 
 // Routes
 app.use('/controller', controllerRoutes);
@@ -38,26 +46,12 @@ app.get('/health', (req, res) => {
     uptime: process.uptime(),
     timestamp: new Date().toISOString(),
     queues: stats,
-    rateLimiter: rateLimiterStats
-  });
-});
-
-// Test endpoint to generate JWT tokens (for development/testing only)
-app.post('/test/generate-token', (req, res) => {
-  const { userId } = req.body;
-  
-  if (!userId) {
-    return res.status(400).json({ 
-      error: 'userId is required' 
-    });
-  }
-  
-  const token = generateToken(userId);
-  
-  res.status(200).json({
-    token: token,
-    userId: userId,
-    message: 'Token generated successfully (for testing only)'
+    rateLimiter: rateLimiterStats,
+    cognito: {
+      configured: isCognitoConfigured(),
+      userPoolId: COGNITO_USER_POOL_ID || 'not-set',
+      region: AWS_REGION
+    }
   });
 });
 

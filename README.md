@@ -140,7 +140,7 @@ Authorization: Bearer <JWT_TOKEN>
 ### Utility Endpoints
 
 #### GET /health
-Health check endpoint with queue statistics.
+Health check endpoint with queue statistics and Cognito configuration status.
 
 **Response:**
 ```json
@@ -155,26 +155,12 @@ Health check endpoint with queue statistics.
   },
   "rateLimiter": {
     "trackedKeys": 10
+  },
+  "cognito": {
+    "configured": true,
+    "userPoolId": "us-east-1_xxxxxxxxx",
+    "region": "us-east-1"
   }
-}
-```
-
-#### POST /test/generate-token
-Generate JWT token for testing (development only).
-
-**Request Body:**
-```json
-{
-  "userId": "string"
-}
-```
-
-**Response:**
-```json
-{
-  "token": "JWT token string",
-  "userId": "string",
-  "message": "Token generated successfully (for testing only)"
 }
 ```
 
@@ -202,22 +188,41 @@ The API implements rate limiting to prevent abuse:
 
 ## JWT Authentication
 
-Mobile app routes require JWT authentication via the `Authorization` header:
+Mobile app routes require AWS Cognito JWT authentication via the `Authorization` header:
 
 ```
-Authorization: Bearer <JWT_TOKEN>
+Authorization: Bearer <COGNITO_JWT_TOKEN>
 ```
 
-The JWT token should contain:
-- `sub` or `userId`: User identifier (Cognito auth ID)
-- `iss`: Token issuer
+### AWS Cognito Setup
 
-In production, tokens should be issued by AWS Cognito. For testing, use the `/test/generate-token` endpoint.
+1. Create an AWS Cognito User Pool in your AWS account
+2. Create an App Client for your mobile application
+3. Configure the following environment variables:
+   - `COGNITO_USER_POOL_ID`: Your Cognito User Pool ID (e.g., us-east-1_xxxxxxxxx)
+   - `COGNITO_CLIENT_ID`: Your Cognito App Client ID
+   - `AWS_REGION`: AWS region where your User Pool is located (default: us-east-1)
+
+### Token Requirements
+
+The mobile app must:
+- Obtain JWT access tokens from AWS Cognito (using AWS Amplify or Cognito SDK)
+- Include the token in the `Authorization: Bearer <token>` header
+- Handle token expiration (Cognito tokens typically expire after 1 hour)
+- Refresh tokens when they expire using Cognito's refresh token mechanism
+
+The JWT token will contain:
+- `sub`: Unique user identifier from Cognito
+- `username` or `cognito:username`: User's username
+- `email`: User's email (if available)
+- Other Cognito claims
 
 ## Environment Variables
 
 - `PORT`: Server port (default: 3000)
-- `JWT_SECRET`: Secret key for JWT verification (default: 'your-secret-key-change-in-production')
+- `COGNITO_USER_POOL_ID`: AWS Cognito User Pool ID (required for authentication)
+- `COGNITO_CLIENT_ID`: AWS Cognito App Client ID (required for authentication)
+- `AWS_REGION`: AWS region for Cognito (default: us-east-1)
 
 ## Message Format
 

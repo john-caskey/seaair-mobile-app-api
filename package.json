@@ -7,13 +7,21 @@
     "dev": "node server.js",
     "test": "node test.js"
   },
-  "keywords": ["protobuf", "api", "mobile", "iot", "controller"],
+  "keywords": [
+    "protobuf",
+    "api",
+    "mobile",
+    "iot",
+    "controller"
+  ],
   "author": "",
   "license": "ISC",
   "description": "Transport layer API for SeaAir mobile app and controller communication using protobuf",
   "dependencies": {
+    "aws-jwt-verify": "^5.1.1",
     "express": "^5.2.1",
     "jsonwebtoken": "^9.0.3",
+    "jwks-rsa": "^3.2.0",
     "morgan": "^1.10.1",
     "protobufjs": "^8.0.0"
   }

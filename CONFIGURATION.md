@@ -17,34 +17,139 @@ cp .env.example .env
 - **Default**: `3000`
 - **Example**: `PORT=8080`
 
-#### JWT_SECRET
-- **Description**: Secret key used to sign and verify JWT tokens
-- **Default**: `your-secret-key-change-in-production`
-- **Important**: In production, use a strong, randomly generated secret
-- **Generate a secure secret**:
-  ```bash
-  node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
-  ```
-- **Example**: `JWT_SECRET=a1b2c3d4e5f6...`
+#### COGNITO_USER_POOL_ID
+- **Description**: AWS Cognito User Pool ID for JWT authentication
+- **Required**: Yes (for mobile app authentication to work)
+- **Format**: `<region>_<random_string>` (e.g., `us-east-1_aBcDeFgHi`)
+- **How to get**: From AWS Console → Cognito → User Pools → Your Pool → General Settings → Pool Id
+- **Example**: `COGNITO_USER_POOL_ID=us-east-1_aBcDeFgHi`
+
+#### COGNITO_CLIENT_ID
+- **Description**: AWS Cognito App Client ID for your mobile application
+- **Required**: Yes (for mobile app authentication to work)
+- **Format**: 26-character alphanumeric string
+- **How to get**: From AWS Console → Cognito → User Pools → Your Pool → App Clients → Your App → App client id
+- **Example**: `COGNITO_CLIENT_ID=1234567890abcdefghijklmnop`
+
+#### AWS_REGION
+- **Description**: AWS region where your Cognito User Pool is located
+- **Default**: `us-east-1`
+- **Example**: `AWS_REGION=us-west-2`
+
+## AWS Cognito Setup
+
+### Step 1: Create a Cognito User Pool
+
+1. Go to AWS Console → Amazon Cognito
+2. Click "Create user pool"
+3. Configure sign-in options (email, username, etc.)
+4. Configure security requirements (MFA, password policy)
+5. Configure sign-up experience
+6. Configure message delivery (email/SMS)
+7. Name your user pool and create it
+
+### Step 2: Create an App Client
+
+1. In your User Pool, go to "App clients"
+2. Click "Create app client"
+3. Name your app client (e.g., "seaair-mobile-app")
+4. Configure the following settings:
+   - **Authentication flows**: Enable "ALLOW_USER_PASSWORD_AUTH" and "ALLOW_REFRESH_TOKEN_AUTH"
+   - **Token expiration**: Set appropriate expiration times (default: 1 hour for access tokens)
+5. Create the app client
+6. Note the **App client ID** - you'll need this for `COGNITO_CLIENT_ID`
+
+### Step 3: Configure Your API
+
+Set the environment variables:
+
+```bash
+export COGNITO_USER_POOL_ID="us-east-1_xxxxxxxxx"
+export COGNITO_CLIENT_ID="xxxxxxxxxxxxxxxxxxxxxxxxxx"
+export AWS_REGION="us-east-1"
+export PORT=3000
+```
+
+Or create a `.env` file:
+
+```
+COGNITO_USER_POOL_ID=us-east-1_xxxxxxxxx
+COGNITO_CLIENT_ID=xxxxxxxxxxxxxxxxxxxxxxxxxx
+AWS_REGION=us-east-1
+PORT=3000
+```
+
+### Step 4: Mobile App Integration
+
+Your mobile app needs to:
+
+1. **Install AWS SDK**:
+   ```bash
+   # For React Native
+   npm install aws-amplify amazon-cognito-identity-js
+   
+   # For iOS
+   pod 'AWSCognito'
+   
+   # For Android
+   implementation 'com.amazonaws:aws-android-sdk-cognitoidentityprovider'
+   ```
+
+2. **Configure Cognito**:
+   ```javascript
+   // Example for React Native with AWS Amplify
+   import { Amplify, Auth } from 'aws-amplify';
+   
+   Amplify.configure({
+     Auth: {
+       region: 'us-east-1',
+       userPoolId: 'us-east-1_xxxxxxxxx',
+       userPoolWebClientId: 'xxxxxxxxxxxxxxxxxxxxxxxxxx',
+     }
+   });
+   ```
+
+3. **Authenticate Users**:
+   ```javascript
+   // Sign in
+   const user = await Auth.signIn(username, password);
+   
+   // Get access token
+   const session = await Auth.currentSession();
+   const accessToken = session.getAccessToken().getJwtToken();
+   
+   // Use token in API requests
+   fetch('https://api.example.com/mobile/message', {
+     method: 'POST',
+     headers: {
+       'Authorization': `Bearer ${accessToken}`,
+       'Content-Type': 'application/json'
+     },
+     body: JSON.stringify({...})
+   });
+   ```
+
+4. **Handle Token Refresh**:
+   ```javascript
+   // AWS Amplify handles refresh automatically
+   // Manually refresh if needed:
+   const session = await Auth.currentSession();
+   // This will automatically refresh if expired
+   ```
 
 ## Production Deployment
 
 ### Security Considerations
 
-1. **JWT Secret**: Always use a strong, randomly generated JWT secret in production
-   ```bash
-   JWT_SECRET=$(node -e "console.log(require('crypto').randomBytes(64).toString('hex'))")
-   ```
+1. **AWS Cognito**: Properly configure your Cognito User Pool with MFA, password policies, and security settings
 
 2. **HTTPS**: Deploy behind a reverse proxy (like Nginx) with SSL/TLS enabled
 
 3. **Rate Limiting**: The built-in rate limiter provides basic protection, but consider adding additional protection at the infrastructure level (e.g., AWS WAF, Cloudflare)
 
-4. **Token Generation**: Disable the `/test/generate-token` endpoint in production or protect it with additional authentication
+4. **CORS**: Add appropriate CORS headers if the API needs to be accessed from web browsers
 
-5. **CORS**: Add appropriate CORS headers if the API needs to be accessed from web browsers
-
-6. **Input Validation**: The API validates basic inputs, but ensure protobuf payloads are validated on the application layer
+5. **Input Validation**: The API validates basic inputs, but ensure protobuf payloads are validated on the application layer
 
 ### Deployment Options
 
@@ -53,7 +158,9 @@ cp .env.example .env
 ```bash
 # Set environment variables
 export PORT=8080
-export JWT_SECRET="your-production-secret"
+export COGNITO_USER_POOL_ID="us-east-1_xxxxxxxxx"
+export COGNITO_CLIENT_ID="xxxxxxxxxxxxxxxxxxxxxxxxxx"
+export AWS_REGION="us-east-1"
 
 # Start the server
 npm start
