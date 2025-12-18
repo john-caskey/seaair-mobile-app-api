@@ -246,7 +246,7 @@ const root = await protobuf.load(['ble.proto', 'bossmarine.proto']);
 const HvacConfig = root.lookupType('BM.HvacConfig');
 const message = HvacConfig.create({
   mode: 1, // COOL
-  tempreature: 72,
+  temperature: 72,
   humidity: 50
 });
 

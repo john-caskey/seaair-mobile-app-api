@@ -17,6 +17,7 @@ class RateLimiter {
 
   /**
    * Check if a request should be allowed
+   * Does not record the request - use recordRequest() after checking both auth and IP limits
    * @param {string} key - Identifier (auth:userId or ip:address)
    * @returns {boolean} True if allowed, false if rate limited
    */
@@ -40,7 +41,6 @@ class RateLimiter {
       return false;
     }
 
-    // IMPORTANT: Don't add timestamp here, let caller do it with recordRequest()
     return true;
   }
 

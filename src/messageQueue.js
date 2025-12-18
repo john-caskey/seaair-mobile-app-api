@@ -104,7 +104,7 @@ class MessageQueue {
       return null;
     }
 
-    // Delete after retrieval
+    // Remove message after successful retrieval
     this.controllerQueue.delete(controllerId);
     
     console.log(`[MessageQueue] Retrieved and deleted controller message for controller ${controllerId}`);
