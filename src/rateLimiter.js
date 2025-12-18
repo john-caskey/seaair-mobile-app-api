@@ -17,7 +17,7 @@ class RateLimiter {
 
   /**
    * Check if a request should be allowed
-   * @param {string} key - Identifier (controllerId:authId or controllerId:ip)
+   * @param {string} key - Identifier (auth:userId or ip:address)
    * @returns {boolean} True if allowed, false if rate limited
    */
   checkLimit(key) {
@@ -40,10 +40,22 @@ class RateLimiter {
       return false;
     }
 
-    // Add current timestamp
-    recentTimestamps.push(now);
-    
+    // IMPORTANT: Don't add timestamp here, let caller do it with recordRequest()
     return true;
+  }
+
+  /**
+   * Record a request for rate limiting
+   * @param {string} key - Identifier to record
+   */
+  recordRequest(key) {
+    const now = Date.now();
+    
+    if (!this.requests.has(key)) {
+      this.requests.set(key, []);
+    }
+    
+    this.requests.get(key).push(now);
   }
 
   /**

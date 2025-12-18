@@ -134,13 +134,16 @@ async function runTests() {
 
     // Test 8: Rate limiting
     console.log('Test 8: Rate Limiting (sending 26 requests)');
+    // Note: We've already made 2 requests in previous tests (test 5 and test 7)
+    // So we need to account for those when testing the rate limit of 25
     let successCount = 0;
     let rateLimitedCount = 0;
     
-    for (let i = 0; i < 26; i++) {
+    // Send 23 more requests to reach the limit (2 already sent + 23 = 25)
+    for (let i = 0; i < 23; i++) {
       const result = await makeRequest('POST', '/mobile/message', {
         controllerId: 'test-controller-2',
-        protobufPayload: `dGVzdC0ke i}`
+        protobufPayload: `dGVzdC0${i}`
       }, {
         'Authorization': `Bearer ${token}`
       });
@@ -149,14 +152,28 @@ async function runTests() {
       if (result.status === 429) rateLimitedCount++;
     }
     
-    assert(successCount === 25, `Rate limiter allows 25 requests (got ${successCount})`);
-    assert(rateLimitedCount === 1, `Rate limiter blocks 26th request (got ${rateLimitedCount} blocked)`);
+    // These 3 should be rate limited
+    for (let i = 23; i < 26; i++) {
+      const result = await makeRequest('POST', '/mobile/message', {
+        controllerId: 'test-controller-2',
+        protobufPayload: `dGVzdC0${i}`
+      }, {
+        'Authorization': `Bearer ${token}`
+      });
+      
+      if (result.status === 200) successCount++;
+      if (result.status === 429) rateLimitedCount++;
+    }
+    
+    assert(successCount === 23, `Rate limiter allows 23 more requests after 2 previous (got ${successCount})`);
+    assert(rateLimitedCount === 3, `Rate limiter blocks requests 26-28 (got ${rateLimitedCount} blocked)`);
     console.log('');
 
     // Test 9: Message expiration not triggered (messages should still be there)
     console.log('Test 9: Messages Are Queued Correctly');
     const checkHealth = await makeRequest('GET', '/health');
-    assert(checkHealth.body.queues.mobileAppMessages === 25, 'All 25 messages are in queue');
+    // We sent 23 messages in test 8 that succeeded
+    assert(checkHealth.body.queues.mobileAppMessages === 23, `All 23 messages are in queue (got ${checkHealth.body.queues.mobileAppMessages})`);
     console.log('');
 
     // Test 10: Retrieve messages in FIFO order

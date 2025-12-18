@@ -40,25 +40,29 @@ router.post('/message', verifyJWT, (req, res) => {
     });
   }
 
-  // Rate limiting check
-  const rateLimitKey = `${controllerId}:${authId}`;
-  if (!req.app.locals.rateLimiter.checkLimit(rateLimitKey)) {
-    console.log(`[Mobile] Rate limit exceeded for user ${authId} to controller ${controllerId}`);
+  // Rate limiting check - track per account and per IP to any controller
+  const authRateLimitKey = `auth:${authId}`;
+  if (!req.app.locals.rateLimiter.checkLimit(authRateLimitKey)) {
+    console.log(`[Mobile] Rate limit exceeded for user ${authId}`);
     return res.status(429).json({ 
       error: 'Rate limit exceeded',
-      message: 'Too many requests. Maximum 25 requests per 30 seconds.'
+      message: 'Too many requests from this account. Maximum 25 requests per 30 seconds.'
     });
   }
 
-  // Also check rate limiting by IP to controller
-  const ipRateLimitKey = `${controllerId}:${ip}`;
+  // Also check rate limiting by IP
+  const ipRateLimitKey = `ip:${ip}`;
   if (!req.app.locals.rateLimiter.checkLimit(ipRateLimitKey)) {
-    console.log(`[Mobile] Rate limit exceeded for IP ${ip} to controller ${controllerId}`);
+    console.log(`[Mobile] Rate limit exceeded for IP ${ip}`);
     return res.status(429).json({ 
       error: 'Rate limit exceeded',
       message: 'Too many requests from this IP. Maximum 25 requests per 30 seconds.'
     });
   }
+
+  // Record this request for both auth and IP rate limiting
+  req.app.locals.rateLimiter.recordRequest(authRateLimitKey);
+  req.app.locals.rateLimiter.recordRequest(ipRateLimitKey);
 
   // Create message object
   const message = {
@@ -100,15 +104,29 @@ router.get('/status/:controllerId', verifyJWT, (req, res) => {
     });
   }
 
-  // Rate limiting check
-  const rateLimitKey = `${controllerId}:${authId}`;
-  if (!req.app.locals.rateLimiter.checkLimit(rateLimitKey)) {
-    console.log(`[Mobile] Rate limit exceeded for user ${authId} to controller ${controllerId}`);
+  // Rate limiting check - track per account and per IP
+  const authRateLimitKey = `auth:${authId}`;
+  if (!req.app.locals.rateLimiter.checkLimit(authRateLimitKey)) {
+    console.log(`[Mobile] Rate limit exceeded for user ${authId}`);
     return res.status(429).json({ 
       error: 'Rate limit exceeded',
-      message: 'Too many requests. Maximum 25 requests per 30 seconds.'
+      message: 'Too many requests from this account. Maximum 25 requests per 30 seconds.'
     });
   }
+
+  // Also check IP rate limiting
+  const ipRateLimitKey = `ip:${ip}`;
+  if (!req.app.locals.rateLimiter.checkLimit(ipRateLimitKey)) {
+    console.log(`[Mobile] Rate limit exceeded for IP ${ip}`);
+    return res.status(429).json({ 
+      error: 'Rate limit exceeded',
+      message: 'Too many requests from this IP. Maximum 25 requests per 30 seconds.'
+    });
+  }
+
+  // Record this request for both auth and IP rate limiting
+  req.app.locals.rateLimiter.recordRequest(authRateLimitKey);
+  req.app.locals.rateLimiter.recordRequest(ipRateLimitKey);
 
   // Retrieve controller status message
   const message = req.app.locals.messageQueue.getControllerMessage(controllerId);
