@@ -16,7 +16,7 @@ This document provides practical examples of how to use the SeaAir Mobile App AP
    npm start
    ```
 
-3. The server will run on `http://localhost:3000` (or the port specified by the `PORT` environment variable)
+3. The server will run on `http://mobile-app-api.seaair.com:3000` (or the port specified by the `PORT` environment variable)
 
 4. Obtain a JWT token from AWS Cognito (see "Getting a Cognito Token" section below)
 
@@ -73,7 +73,7 @@ echo $TOKEN
 A physical controller device sends its status to the API:
 
 ```bash
-curl -X POST http://localhost:3000/controller/heartbeat \
+curl -X POST http://mobile-app-api.seaair.com:3000/controller/heartbeat \
   -H "Content-Type: application/json" \
   -d '{
     "controllerId": "controller-abc123",
@@ -98,7 +98,7 @@ The mobile app must have a valid AWS Cognito JWT token:
 # Use your Cognito token
 TOKEN="eyJraWQiOiJ..."  # Your actual Cognito access token
 
-curl -X POST http://localhost:3000/mobile/message \
+curl -X POST http://mobile-app-api.seaair.com:3000/mobile/message \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{
@@ -121,7 +121,7 @@ Response:
 The controller polls the API to check for messages from the mobile app:
 
 ```bash
-curl -X GET http://localhost:3000/controller/messages/controller-abc123
+curl -X GET http://mobile-app-api.seaair.com:3000/controller/messages/controller-abc123
 ```
 
 Response when messages are available:
@@ -155,7 +155,7 @@ Response when no messages:
 The mobile app checks the latest status from a controller:
 
 ```bash
-curl -X GET http://localhost:3000/mobile/status/controller-abc123 \
+curl -X GET http://mobile-app-api.seaair.com:3000/mobile/status/controller-abc123 \
   -H "Authorization: Bearer $TOKEN"
 ```
 
@@ -181,7 +181,7 @@ Response:
 Check the API health and queue statistics:
 
 ```bash
-curl http://localhost:3000/health
+curl http://mobile-app-api.seaair.com:3000/health
 ```
 
 Response:
@@ -208,7 +208,7 @@ The API will block excessive requests (more than 25 in 30 seconds):
 ```bash
 # Send 26 requests rapidly
 for i in {1..26}; do
-  curl -X POST http://localhost:3000/mobile/message \
+  curl -X POST http://mobile-app-api.seaair.com:3000/mobile/message \
     -H "Content-Type: application/json" \
     -H "Authorization: Bearer $TOKEN" \
     -d "{\"controllerId\": \"controller-abc123\", \"protobufPayload\": \"test-$i\"}"
@@ -228,7 +228,7 @@ The first 25 requests will succeed. The 26th request will return:
 ### Missing Authentication
 
 ```bash
-curl -X POST http://localhost:3000/mobile/message \
+curl -X POST http://mobile-app-api.seaair.com:3000/mobile/message \
   -H "Content-Type: application/json" \
   -d '{
     "controllerId": "controller-abc123",
@@ -247,7 +247,7 @@ Response (401):
 ### Invalid Token
 
 ```bash
-curl -X POST http://localhost:3000/mobile/message \
+curl -X POST http://mobile-app-api.seaair.com:3000/mobile/message \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer invalid-token" \
   -d '{
@@ -267,7 +267,7 @@ Response (401):
 ### Missing Required Fields
 
 ```bash
-curl -X POST http://localhost:3000/controller/heartbeat \
+curl -X POST http://mobile-app-api.seaair.com:3000/controller/heartbeat \
   -H "Content-Type: application/json" \
   -d '{
     "protobufPayload": "test"
