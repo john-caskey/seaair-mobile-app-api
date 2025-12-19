@@ -151,12 +151,18 @@ Authorization: Bearer <JWT_TOKEN>
 
 ### Utility Endpoints
 
-#### GET /health
-Health check endpoint with queue statistics and Cognito configuration status.
+#### Health Monitoring (Internal Only)
+For security reasons, the `/health` endpoint has been removed from public access. Health data is automatically logged to the console every 60 seconds for internal monitoring.
 
-**Response:**
-```json
-{
+The health data includes:
+- System status and uptime
+- Queue statistics (mobile app messages, controller messages)
+- Rate limiter statistics
+- Cognito configuration status
+
+**Console Output Example:**
+```
+[Health Monitor] {
   "status": "healthy",
   "uptime": 12345.67,
   "timestamp": "ISO 8601 timestamp",

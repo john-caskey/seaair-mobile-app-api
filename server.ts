@@ -37,12 +37,13 @@ if (isCognitoConfigured()) {
 app.use('/controller', controllerRoutes);
 app.use('/mobile', mobileRoutes);
 
-// Health check endpoint
-app.get('/health', (_req: Request, res: Response): void => {
+// Health monitoring - log health data to console every minute
+// Note: /health endpoint has been removed for security reasons (don't expose system information)
+const logHealthData = (): void => {
   const stats = app.locals.messageQueue.getStats();
   const rateLimiterStats = app.locals.rateLimiter.getStats();
   
-  const response: HealthResponse = {
+  const healthData: HealthResponse = {
     status: 'healthy',
     uptime: process.uptime(),
     timestamp: new Date().toISOString(),
@@ -55,8 +56,11 @@ app.get('/health', (_req: Request, res: Response): void => {
     }
   };
 
-  res.status(200).json(response);
-});
+  console.log('[Health Monitor]', JSON.stringify(healthData, null, 2));
+};
+
+// Log health data every minute (60000 milliseconds)
+setInterval(logHealthData, 60000);
 
 // 404 handler
 app.use((req: Request, res: Response): void => {
@@ -80,7 +84,7 @@ app.listen(PORT, () => {
   console.log(`[Server] SeaAir Mobile App API running on port ${PORT}`);
   console.log(`[Server] Controller routes available at /controller`);
   console.log(`[Server] Mobile app routes available at /mobile`);
-  console.log(`[Server] Health check available at /health`);
+  console.log(`[Server] Health monitoring enabled (logs every 60 seconds)`);
 });
 
 export default app;
