@@ -2,6 +2,8 @@
 
 Transport layer API for SeaAir mobile app and physical controller communication using Protocol Buffers.
 
+> **Note**: This project has been migrated to TypeScript. See [TYPESCRIPT-MIGRATION.md](TYPESCRIPT-MIGRATION.md) for details.
+
 ## Overview
 
 This Node.js API serves as a message transport layer between a mobile application and physical hardware controllers. The controllers communicate via WiFi while the mobile app can communicate either directly via Bluetooth or through this API when Bluetooth is unavailable.
@@ -21,6 +23,16 @@ This Node.js API serves as a message transport layer between a mobile applicatio
 ```bash
 npm install
 ```
+
+## Building the Project
+
+Since the project is now written in TypeScript, you need to build it first:
+
+```bash
+npm run build
+```
+
+This compiles the TypeScript code to JavaScript in the `dist/` directory.
 
 ## Running the Server
 
@@ -196,12 +208,30 @@ Authorization: Bearer <COGNITO_JWT_TOKEN>
 
 ### AWS Cognito Setup
 
+The AWS Cognito configuration is now centralized in `src/config/cognito.ts`. You have two options for configuration:
+
+### Option 1: Configure in Code (Recommended)
+
+Edit `src/config/cognito.ts` and set your values directly:
+
+```typescript
+export const cognitoConfig: CognitoConfig = {
+  userPoolId: 'us-east-1_YourPoolId',
+  clientId: 'YourClientId12345',
+  region: 'us-east-1',
+};
+```
+
+### Option 2: Use Environment Variables
+
 1. Create an AWS Cognito User Pool in your AWS account
 2. Create an App Client for your mobile application
-3. Configure the following environment variables:
+3. Set the environment variables:
    - `COGNITO_USER_POOL_ID`: Your Cognito User Pool ID (e.g., us-east-1_xxxxxxxxx)
    - `COGNITO_CLIENT_ID`: Your Cognito App Client ID
    - `AWS_REGION`: AWS region where your User Pool is located (default: us-east-1)
+
+See [CONFIGURATION.md](CONFIGURATION.md) for detailed setup instructions.
 
 ### Token Requirements
 
