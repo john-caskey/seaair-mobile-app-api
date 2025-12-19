@@ -60,6 +60,7 @@ const logHealthData = (): void => {
 };
 
 // Log health data every minute (60000 milliseconds)
+// Note: The interval keeps the process alive, which is intentional for a long-running server
 setInterval(logHealthData, 60000);
 
 // 404 handler
