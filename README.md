@@ -149,6 +149,80 @@ Authorization: Bearer <JWT_TOKEN>
 }
 ```
 
+### Configuration Routes (JWT Authentication Required)
+
+#### POST /config/device
+Associate a controller device with a user account. This creates a durable association in DynamoDB.
+
+**Headers:**
+```
+Authorization: Bearer <JWT_TOKEN>
+```
+
+**Request Body:**
+```json
+{
+  "controllerId": "string (required)"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Device associated successfully",
+  "userId": "cognito-user-sub",
+  "controllerId": "string"
+}
+```
+
+#### GET /config/device/:controllerId
+Retrieve user-device association from DynamoDB.
+
+**Headers:**
+```
+Authorization: Bearer <JWT_TOKEN>
+```
+
+**Response (when association exists):**
+```json
+{
+  "success": true,
+  "association": {
+    "userId": "cognito-user-sub",
+    "controllerId": "string",
+    "createdAt": "ISO 8601 timestamp",
+    "updatedAt": "ISO 8601 timestamp"
+  }
+}
+```
+
+**Response (no association):**
+```json
+{
+  "success": false,
+  "message": "No device association found"
+}
+```
+
+#### DELETE /config/device/:controllerId
+Delete user-device association from DynamoDB.
+
+**Headers:**
+```
+Authorization: Bearer <JWT_TOKEN>
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Device dissociated successfully",
+  "userId": "cognito-user-sub",
+  "controllerId": "string"
+}
+```
+
 ### Utility Endpoints
 
 #### GET /health
@@ -230,6 +304,8 @@ export const cognitoConfig: CognitoConfig = {
    - `COGNITO_USER_POOL_ID`: Your Cognito User Pool ID (e.g., us-east-1_xxxxxxxxx)
    - `COGNITO_CLIENT_ID`: Your Cognito App Client ID
    - `AWS_REGION`: AWS region where your User Pool is located (default: us-east-1)
+   - `AWS_ACCESS_KEY_ID`: AWS Access Key ID for DynamoDB access (optional - use IAM roles in production)
+   - `AWS_SECRET_ACCESS_KEY`: AWS Secret Access Key for DynamoDB access (optional - use IAM roles in production)
 
 See [CONFIGURATION.md](CONFIGURATION.md) for detailed setup instructions.
 
@@ -252,7 +328,33 @@ The JWT token will contain:
 - `PORT`: Server port (default: 3000)
 - `COGNITO_USER_POOL_ID`: AWS Cognito User Pool ID (required for authentication)
 - `COGNITO_CLIENT_ID`: AWS Cognito App Client ID (required for authentication)
-- `AWS_REGION`: AWS region for Cognito (default: us-east-1)
+- `AWS_REGION`: AWS region for Cognito and DynamoDB (default: us-east-1)
+- `AWS_ACCESS_KEY_ID`: AWS Access Key ID for DynamoDB access (optional - recommended to use IAM roles in production)
+- `AWS_SECRET_ACCESS_KEY`: AWS Secret Access Key for DynamoDB access (optional - recommended to use IAM roles in production)
+
+## DynamoDB Configuration
+
+The API uses AWS DynamoDB to store durable user-device associations. The table structure is:
+
+- **Table Name**: `seaair-user-device`
+- **Partition Key**: `user-id` (String) - Cognito user sub/ID
+- **Sort Key**: `controller-id` (String) - Controller device ID
+- **Attributes**:
+  - `createdAt`: ISO 8601 timestamp when association was created
+  - `updatedAt`: ISO 8601 timestamp when association was last updated
+
+### DynamoDB Setup
+
+1. Create a DynamoDB table in your AWS account with the following configuration:
+   - Table name: `seaair-user-device`
+   - Partition key: `user-id` (String)
+   - Sort key: `controller-id` (String)
+
+2. Configure AWS credentials:
+   - **For local development**: Set `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` in your `.env` file
+   - **For production**: Use IAM roles attached to your EC2/ECS/Lambda instances (recommended)
+
+The API will automatically use the configured credentials to access DynamoDB.
 
 ## Message Format
 
