@@ -36,6 +36,22 @@ cp .env.example .env
 - **Default**: `us-east-1`
 - **Example**: `AWS_REGION=us-west-2`
 
+#### AWS_ACCESS_KEY_ID
+- **Description**: AWS Access Key ID for DynamoDB access
+- **Required**: Optional (recommended to use IAM roles in production)
+- **Format**: 20-character alphanumeric string
+- **How to get**: From AWS Console → IAM → Users → Your User → Security Credentials → Access Keys
+- **Example**: `AWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE`
+- **Note**: For production, use IAM roles attached to EC2/ECS/Lambda instead of hardcoding credentials
+
+#### AWS_SECRET_ACCESS_KEY
+- **Description**: AWS Secret Access Key for DynamoDB access
+- **Required**: Optional (recommended to use IAM roles in production)
+- **Format**: 40-character alphanumeric string
+- **How to get**: From AWS Console → IAM → Users → Your User → Security Credentials → Access Keys
+- **Example**: `AWS_SECRET_ACCESS_KEY=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY`
+- **Note**: For production, use IAM roles attached to EC2/ECS/Lambda instead of hardcoding credentials
+
 ## AWS Cognito Setup
 
 ### Step 1: Create a Cognito User Pool
@@ -59,6 +75,60 @@ cp .env.example .env
 5. Create the app client
 6. Note the **App client ID** - you'll need this for `COGNITO_CLIENT_ID`
 
+## AWS DynamoDB Setup
+
+### Step 1: Create a DynamoDB Table
+
+1. Go to AWS Console → DynamoDB
+2. Click "Create table"
+3. Configure table settings:
+   - **Table name**: `seaair-user-device`
+   - **Partition key**: `user-id` (String)
+   - **Sort key**: `controller-id` (String)
+4. Leave other settings as default or customize as needed
+5. Click "Create table"
+
+### Step 2: Configure IAM Permissions
+
+#### For Local Development:
+
+Create an IAM user with DynamoDB access:
+
+1. Go to AWS Console → IAM → Users
+2. Create a new user (e.g., "seaair-api-dev")
+3. Attach the following policy:
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "dynamodb:PutItem",
+        "dynamodb:GetItem",
+        "dynamodb:DeleteItem",
+        "dynamodb:Query"
+      ],
+      "Resource": "arn:aws:dynamodb:*:*:table/seaair-user-device"
+    }
+  ]
+}
+```
+
+4. Create access keys and note the Access Key ID and Secret Access Key
+5. Add them to your `.env` file
+
+#### For Production (Recommended):
+
+Use IAM roles attached to your compute resources (EC2, ECS, Lambda):
+
+1. Go to AWS Console → IAM → Roles
+2. Create a new role for your service (e.g., EC2 role)
+3. Attach the same DynamoDB policy shown above
+4. Attach the role to your EC2 instance or ECS task
+5. **Do not** set `AWS_ACCESS_KEY_ID` or `AWS_SECRET_ACCESS_KEY` - the SDK will automatically use the IAM role
+
 ### Step 3: Configure Your API
 
 Set the environment variables:
@@ -67,6 +137,9 @@ Set the environment variables:
 export COGNITO_USER_POOL_ID="us-east-1_xxxxxxxxx"
 export COGNITO_CLIENT_ID="xxxxxxxxxxxxxxxxxxxxxxxxxx"
 export AWS_REGION="us-east-1"
+# For local development only:
+export AWS_ACCESS_KEY_ID="AKIAIOSFODNN7EXAMPLE"
+export AWS_SECRET_ACCESS_KEY="wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
 export PORT=3000
 ```
 
@@ -76,6 +149,9 @@ Or create a `.env` file:
 COGNITO_USER_POOL_ID=us-east-1_xxxxxxxxx
 COGNITO_CLIENT_ID=xxxxxxxxxxxxxxxxxxxxxxxxxx
 AWS_REGION=us-east-1
+# For local development only:
+AWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE
+AWS_SECRET_ACCESS_KEY=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
 PORT=3000
 ```
 

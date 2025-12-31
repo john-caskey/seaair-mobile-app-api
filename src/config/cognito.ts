@@ -1,6 +1,6 @@
 /**
- * AWS Cognito Configuration
- * Centralized configuration for AWS Cognito authentication
+ * AWS Configuration
+ * Centralized configuration for AWS services (Cognito and DynamoDB)
  * 
  * Update these values once for your deployment
  */
@@ -9,6 +9,12 @@ export interface CognitoConfig {
   userPoolId: string;
   clientId: string;
   region: string;
+}
+
+export interface AWSConfig {
+  region: string;
+  accessKeyId?: string;
+  secretAccessKey?: string;
 }
 
 /**
@@ -35,6 +41,31 @@ export const cognitoConfig: CognitoConfig = {
 };
 
 /**
+ * Default AWS configuration for DynamoDB and other AWS services
+ * 
+ * IMPORTANT: Set these values with your AWS credentials
+ * You can set AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY environment variables
+ * or update the values here directly (not recommended for production)
+ * 
+ * For local development and testing:
+ * - Set AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY in your .env file
+ * 
+ * For production:
+ * - Use IAM roles attached to your EC2/ECS/Lambda instances
+ * - Or use environment variables in your deployment environment
+ */
+export const awsConfig: AWSConfig = {
+  // AWS Region (should match your Cognito region)
+  region: process.env.AWS_REGION || 'us-east-1',
+  
+  // AWS Access Key ID (optional - if not set, SDK will use IAM role or default credentials)
+  accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+  
+  // AWS Secret Access Key (optional - if not set, SDK will use IAM role or default credentials)
+  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+};
+
+/**
  * Check if Cognito is properly configured
  */
 export function isCognitoConfigured(): boolean {
@@ -46,4 +77,11 @@ export function isCognitoConfigured(): boolean {
  */
 export function getCognitoConfig(): CognitoConfig {
   return cognitoConfig;
+}
+
+/**
+ * Get AWS configuration
+ */
+export function getAWSConfig(): AWSConfig {
+  return awsConfig;
 }
