@@ -9,6 +9,7 @@ import { MessageQueue } from './src/messageQueue';
 import { RateLimiter } from './src/rateLimiter';
 import controllerRoutes from './src/routes/controller';
 import mobileRoutes from './src/routes/mobile';
+import configRoutes from './src/routes/config';
 import { isCognitoConfigured, COGNITO_USER_POOL_ID, AWS_REGION } from './src/auth';
 import { HealthResponse } from './src/types';
 
@@ -36,6 +37,7 @@ if (isCognitoConfigured()) {
 // Routes
 app.use('/controller', controllerRoutes);
 app.use('/mobile', mobileRoutes);
+app.use('/config', configRoutes);
 
 // Health check endpoint
 app.get('/health', (_req: Request, res: Response): void => {
@@ -80,6 +82,7 @@ app.listen(PORT, () => {
   console.log(`[Server] SeaAir Mobile App API running on port ${PORT}`);
   console.log(`[Server] Controller routes available at /controller`);
   console.log(`[Server] Mobile app routes available at /mobile`);
+  console.log(`[Server] Configuration routes available at /config`);
   console.log(`[Server] Health check available at /health`);
 });
 
