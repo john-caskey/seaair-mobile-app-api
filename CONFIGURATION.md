@@ -84,7 +84,7 @@ cp .env.example .env
 3. Configure table settings:
    - **Table name**: `seaair-user-device`
    - **Partition key**: `user-id` (String)
-   - **Sort key**: `controller-id` (String)
+   - **Sort key**: `controller-id` (String) - Stores numeric controller IDs as strings
 4. Leave other settings as default or customize as needed
 5. Click "Create table"
 

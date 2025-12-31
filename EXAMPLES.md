@@ -76,7 +76,7 @@ A physical controller device sends its status to the API:
 curl -X POST http://mobile-app-api.seaair.com:3000/controller/heartbeat \
   -H "Content-Type: application/json" \
   -d '{
-    "controllerId": "controller-abc123",
+    "controllerId": 12345,
     "protobufPayload": "CAESBggBEAEYAQ=="
   }'
 ```
@@ -86,7 +86,7 @@ Response:
 {
   "success": true,
   "message": "Heartbeat received",
-  "controllerId": "controller-abc123"
+  "controllerId": 12345
 }
 ```
 
@@ -102,7 +102,7 @@ curl -X POST http://mobile-app-api.seaair.com:3000/mobile/message \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{
-    "controllerId": "controller-abc123",
+    "controllerId": 12345,
     "protobufPayload": "CAESBggBEAEYAiICCAE="
   }'
 ```
@@ -112,7 +112,7 @@ Response:
 {
   "success": true,
   "message": "Message queued for controller",
-  "controllerId": "controller-abc123"
+  "controllerId": 12345
 }
 ```
 
@@ -121,7 +121,7 @@ Response:
 The controller polls the API to check for messages from the mobile app:
 
 ```bash
-curl -X GET http://mobile-app-api.seaair.com:3000/controller/messages/controller-abc123
+curl -X GET http://mobile-app-api.seaair.com:3000/controller/messages/12345
 ```
 
 Response when messages are available:
@@ -135,7 +135,7 @@ Response when messages are available:
       "type": "mobile",
       "authId": "user-xyz789"
     },
-    "controllerId": "controller-abc123",
+    "controllerId": 12345,
     "protobufPayload": "CAESBggBEAEYAiICCAE=",
     "expiresAt": 1766017200000
   }
@@ -155,7 +155,7 @@ Response when no messages:
 The mobile app checks the latest status from a controller:
 
 ```bash
-curl -X GET http://mobile-app-api.seaair.com:3000/mobile/status/controller-abc123 \
+curl -X GET http://mobile-app-api.seaair.com:3000/mobile/status/12345 \
   -H "Authorization: Bearer $TOKEN"
 ```
 
@@ -169,7 +169,7 @@ Response:
       "ip": "192.168.1.50",
       "type": "controller"
     },
-    "controllerId": "controller-abc123",
+    "controllerId": 12345,
     "protobufPayload": "CAESBggBEAEYAQ==",
     "expiresAt": 1766017200000
   }
@@ -211,7 +211,7 @@ for i in {1..26}; do
   curl -X POST http://mobile-app-api.seaair.com:3000/mobile/message \
     -H "Content-Type: application/json" \
     -H "Authorization: Bearer $TOKEN" \
-    -d "{\"controllerId\": \"controller-abc123\", \"protobufPayload\": \"test-$i\"}"
+    -d "{\"controllerId\": 12345, \"protobufPayload\": \"test-$i\"}"
 done
 ```
 
@@ -231,7 +231,7 @@ The first 25 requests will succeed. The 26th request will return:
 curl -X POST http://mobile-app-api.seaair.com:3000/mobile/message \
   -H "Content-Type: application/json" \
   -d '{
-    "controllerId": "controller-abc123",
+    "controllerId": 12345,
     "protobufPayload": "test"
   }'
 ```
@@ -251,7 +251,7 @@ curl -X POST http://mobile-app-api.seaair.com:3000/mobile/message \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer invalid-token" \
   -d '{
-    "controllerId": "controller-abc123",
+    "controllerId": 12345,
     "protobufPayload": "test"
   }'
 ```
