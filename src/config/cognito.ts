@@ -37,7 +37,7 @@ export const cognitoConfig: CognitoConfig = {
   clientId: process.env.COGNITO_CLIENT_ID || '40b923fpk6c5v1lvatbcqbdakq',
   
   // AWS Region where your Cognito User Pool is located (e.g., 'us-east-1', 'us-west-2')
-  region: process.env.AWS_REGION || 'us-east-1',
+  region: process.env.AWS_REGION || 'us-east-2',
 };
 
 /**
