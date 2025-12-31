@@ -15,7 +15,7 @@ const router = express.Router();
  * Associate a controller device with a user
  * Requires JWT authentication
  * Body: {
- *   controllerId: string (required)
+ *   controllerId: number (required)
  * }
  */
 router.post('/device', verifyJWT, async (req: Request, res: Response): Promise<void> => {
@@ -26,11 +26,21 @@ router.post('/device', verifyJWT, async (req: Request, res: Response): Promise<v
   console.log(`[Config] Device association request from user ${userId} at ${ip} for controller ${controllerId}`);
 
   // Validate required fields
-  if (!controllerId) {
+  if (controllerId === undefined || controllerId === null) {
     console.log('[Config] Error: controllerId is required');
     res.status(400).json({ 
       error: 'controllerId is required',
       message: 'Please provide a controller ID to associate with your account'
+    });
+    return;
+  }
+
+  // Validate controllerId is a number
+  if (typeof controllerId !== 'number' || !Number.isInteger(controllerId) || controllerId < 0) {
+    console.log('[Config] Error: controllerId must be a non-negative integer');
+    res.status(400).json({ 
+      error: 'controllerId must be a non-negative integer',
+      message: 'Controller ID must be a valid non-negative integer'
     });
     return;
   }
@@ -98,15 +108,16 @@ router.post('/device', verifyJWT, async (req: Request, res: Response): Promise<v
  * Requires JWT authentication
  */
 router.get('/device/:controllerId', verifyJWT, async (req: Request, res: Response): Promise<void> => {
-  const { controllerId } = req.params;
+  const controllerIdParam = req.params.controllerId;
+  const controllerId = parseInt(controllerIdParam, 10);
   const userId = req.auth?.sub; // Cognito user ID (sub)
   const ip = req.ip || req.socket?.remoteAddress || 'unknown';
 
   console.log(`[Config] Device association query from user ${userId} at ${ip} for controller ${controllerId}`);
 
-  if (!controllerId) {
+  if (isNaN(controllerId) || controllerId < 0) {
     res.status(400).json({ 
-      error: 'controllerId is required' 
+      error: 'controllerId must be a valid non-negative integer' 
     });
     return;
   }
@@ -185,15 +196,16 @@ router.get('/device/:controllerId', verifyJWT, async (req: Request, res: Respons
  * Requires JWT authentication
  */
 router.delete('/device/:controllerId', verifyJWT, async (req: Request, res: Response): Promise<void> => {
-  const { controllerId } = req.params;
+  const controllerIdParam = req.params.controllerId;
+  const controllerId = parseInt(controllerIdParam, 10);
   const userId = req.auth?.sub; // Cognito user ID (sub)
   const ip = req.ip || req.socket?.remoteAddress || 'unknown';
 
   console.log(`[Config] Device dissociation request from user ${userId} at ${ip} for controller ${controllerId}`);
 
-  if (!controllerId) {
+  if (isNaN(controllerId) || controllerId < 0) {
     res.status(400).json({ 
-      error: 'controllerId is required' 
+      error: 'controllerId must be a valid non-negative integer' 
     });
     return;
   }

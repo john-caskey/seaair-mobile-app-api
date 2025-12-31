@@ -53,7 +53,7 @@ function getDynamoDBClient(): DynamoDBDocumentClient {
  */
 export interface UserDeviceAssociation {
   userId: string;
-  controllerId: string;
+  controllerId: number;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -61,12 +61,12 @@ export interface UserDeviceAssociation {
 /**
  * Store user-device association in DynamoDB
  * @param userId - The user ID (Cognito sub)
- * @param controllerId - The controller device ID
+ * @param controllerId - The controller device ID (numeric)
  * @returns Promise<void>
  */
 export async function storeUserDeviceAssociation(
   userId: string,
-  controllerId: string
+  controllerId: number
 ): Promise<void> {
   const client = getDynamoDBClient();
   const timestamp = new Date().toISOString();
@@ -75,7 +75,7 @@ export async function storeUserDeviceAssociation(
     TableName: TABLE_NAME,
     Item: {
       'user-id': userId,
-      'controller-id': controllerId,
+      'controller-id': controllerId.toString(),
       createdAt: timestamp,
       updatedAt: timestamp,
     },
@@ -93,12 +93,12 @@ export async function storeUserDeviceAssociation(
 /**
  * Get user-device association from DynamoDB
  * @param userId - The user ID (Cognito sub)
- * @param controllerId - The controller device ID
+ * @param controllerId - The controller device ID (numeric)
  * @returns Promise<UserDeviceAssociation | null>
  */
 export async function getUserDeviceAssociation(
   userId: string,
-  controllerId: string
+  controllerId: number
 ): Promise<UserDeviceAssociation | null> {
   const client = getDynamoDBClient();
 
@@ -106,7 +106,7 @@ export async function getUserDeviceAssociation(
     TableName: TABLE_NAME,
     Key: {
       'user-id': userId,
-      'controller-id': controllerId,
+      'controller-id': controllerId.toString(),
     },
   });
 
@@ -120,7 +120,7 @@ export async function getUserDeviceAssociation(
 
     const association: UserDeviceAssociation = {
       userId: result.Item['user-id'],
-      controllerId: result.Item['controller-id'],
+      controllerId: parseInt(result.Item['controller-id'], 10),
       createdAt: result.Item.createdAt,
       updatedAt: result.Item.updatedAt,
     };
@@ -136,12 +136,12 @@ export async function getUserDeviceAssociation(
 /**
  * Delete user-device association from DynamoDB
  * @param userId - The user ID (Cognito sub)
- * @param controllerId - The controller device ID
+ * @param controllerId - The controller device ID (numeric)
  * @returns Promise<void>
  */
 export async function deleteUserDeviceAssociation(
   userId: string,
-  controllerId: string
+  controllerId: number
 ): Promise<void> {
   const client = getDynamoDBClient();
 
@@ -149,7 +149,7 @@ export async function deleteUserDeviceAssociation(
     TableName: TABLE_NAME,
     Key: {
       'user-id': userId,
-      'controller-id': controllerId,
+      'controller-id': controllerId.toString(),
     },
   });
 

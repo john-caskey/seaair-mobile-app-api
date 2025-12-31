@@ -15,7 +15,7 @@ const router = express.Router();
  * Mobile app sends message to controller
  * Requires JWT authentication
  * Body: {
- *   controllerId: string (required),
+ *   controllerId: number (required),
  *   protobufPayload: string (base64 encoded protobuf)
  * }
  */
@@ -28,10 +28,19 @@ router.post('/message', verifyJWT, (req: Request, res: Response): void => {
   console.log(`[Mobile] Payload:`, JSON.stringify(req.body, null, 2));
 
   // Validate required fields
-  if (!controllerId) {
+  if (controllerId === undefined || controllerId === null) {
     console.log('[Mobile] Error: controllerId is required');
     res.status(400).json({ 
       error: 'controllerId is required' 
+    });
+    return;
+  }
+
+  // Validate controllerId is a number
+  if (typeof controllerId !== 'number' || !Number.isInteger(controllerId) || controllerId < 0) {
+    console.log('[Mobile] Error: controllerId must be a non-negative integer');
+    res.status(400).json({ 
+      error: 'controllerId must be a non-negative integer' 
     });
     return;
   }
@@ -98,15 +107,16 @@ router.post('/message', verifyJWT, (req: Request, res: Response): void => {
  * Requires JWT authentication
  */
 router.get('/status/:controllerId', verifyJWT, (req: Request, res: Response): void => {
-  const { controllerId } = req.params;
+  const controllerIdParam = req.params.controllerId;
+  const controllerId = parseInt(controllerIdParam, 10);
   const ip = req.ip || req.connection?.remoteAddress || 'unknown';
   const authId = req.auth?.sub || req.auth?.userId;
 
   console.log(`[Mobile] Status request from user ${authId} at ${ip} for controller ${controllerId}`);
 
-  if (!controllerId) {
+  if (isNaN(controllerId) || controllerId < 0) {
     res.status(400).json({ 
-      error: 'controllerId is required' 
+      error: 'controllerId must be a valid non-negative integer' 
     });
     return;
   }

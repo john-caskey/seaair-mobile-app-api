@@ -17,7 +17,7 @@ export interface MessageSender {
 export interface Message {
   timestamp: string;
   sender: MessageSender;
-  controllerId: string;
+  controllerId: number;
   protobufPayload: string;
   expiresAt?: number;
 }
