@@ -44,6 +44,32 @@ router.post('/device', verifyJWT, async (req: Request, res: Response): Promise<v
     return;
   }
 
+  // Rate limiting check - track per account and per IP
+  const authRateLimitKey = `auth:${userId}`;
+  if (!req.app.locals.rateLimiter.checkLimit(authRateLimitKey)) {
+    console.log(`[Config] Rate limit exceeded for user ${userId}`);
+    res.status(429).json({ 
+      error: 'Rate limit exceeded',
+      message: 'Too many requests from this account. Maximum 25 requests per 30 seconds.'
+    });
+    return;
+  }
+
+  // Also check rate limiting by IP
+  const ipRateLimitKey = `ip:${ip}`;
+  if (!req.app.locals.rateLimiter.checkLimit(ipRateLimitKey)) {
+    console.log(`[Config] Rate limit exceeded for IP ${ip}`);
+    res.status(429).json({ 
+      error: 'Rate limit exceeded',
+      message: 'Too many requests from this IP. Maximum 25 requests per 30 seconds.'
+    });
+    return;
+  }
+
+  // Record this request for both auth and IP rate limiting
+  req.app.locals.rateLimiter.recordRequest(authRateLimitKey);
+  req.app.locals.rateLimiter.recordRequest(ipRateLimitKey);
+
   try {
     // Store the user-device association in DynamoDB
     await storeUserDeviceAssociation(userId, controllerId);
@@ -92,6 +118,32 @@ router.get('/device/:controllerId', verifyJWT, async (req: Request, res: Respons
     });
     return;
   }
+
+  // Rate limiting check - track per account and per IP
+  const authRateLimitKey = `auth:${userId}`;
+  if (!req.app.locals.rateLimiter.checkLimit(authRateLimitKey)) {
+    console.log(`[Config] Rate limit exceeded for user ${userId}`);
+    res.status(429).json({ 
+      error: 'Rate limit exceeded',
+      message: 'Too many requests from this account. Maximum 25 requests per 30 seconds.'
+    });
+    return;
+  }
+
+  // Also check rate limiting by IP
+  const ipRateLimitKey = `ip:${ip}`;
+  if (!req.app.locals.rateLimiter.checkLimit(ipRateLimitKey)) {
+    console.log(`[Config] Rate limit exceeded for IP ${ip}`);
+    res.status(429).json({ 
+      error: 'Rate limit exceeded',
+      message: 'Too many requests from this IP. Maximum 25 requests per 30 seconds.'
+    });
+    return;
+  }
+
+  // Record this request for both auth and IP rate limiting
+  req.app.locals.rateLimiter.recordRequest(authRateLimitKey);
+  req.app.locals.rateLimiter.recordRequest(ipRateLimitKey);
 
   try {
     // Retrieve the user-device association from DynamoDB
@@ -153,6 +205,32 @@ router.delete('/device/:controllerId', verifyJWT, async (req: Request, res: Resp
     });
     return;
   }
+
+  // Rate limiting check - track per account and per IP
+  const authRateLimitKey = `auth:${userId}`;
+  if (!req.app.locals.rateLimiter.checkLimit(authRateLimitKey)) {
+    console.log(`[Config] Rate limit exceeded for user ${userId}`);
+    res.status(429).json({ 
+      error: 'Rate limit exceeded',
+      message: 'Too many requests from this account. Maximum 25 requests per 30 seconds.'
+    });
+    return;
+  }
+
+  // Also check rate limiting by IP
+  const ipRateLimitKey = `ip:${ip}`;
+  if (!req.app.locals.rateLimiter.checkLimit(ipRateLimitKey)) {
+    console.log(`[Config] Rate limit exceeded for IP ${ip}`);
+    res.status(429).json({ 
+      error: 'Rate limit exceeded',
+      message: 'Too many requests from this IP. Maximum 25 requests per 30 seconds.'
+    });
+    return;
+  }
+
+  // Record this request for both auth and IP rate limiting
+  req.app.locals.rateLimiter.recordRequest(authRateLimitKey);
+  req.app.locals.rateLimiter.recordRequest(ipRateLimitKey);
 
   try {
     // Delete the user-device association from DynamoDB
