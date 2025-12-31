@@ -36,11 +36,11 @@ router.post('/device', verifyJWT, async (req: Request, res: Response): Promise<v
   }
 
   // Validate controllerId is a number
-  if (typeof controllerId !== 'number' || !Number.isInteger(controllerId) || controllerId < 0) {
-    console.log('[Config] Error: controllerId must be a non-negative integer');
+  if (typeof controllerId !== 'number' || !Number.isInteger(controllerId) || controllerId < 0 || !Number.isSafeInteger(controllerId)) {
+    console.log('[Config] Error: controllerId must be a safe non-negative integer');
     res.status(400).json({ 
-      error: 'controllerId must be a non-negative integer',
-      message: 'Controller ID must be a valid non-negative integer'
+      error: 'controllerId must be a safe non-negative integer (within JavaScript safe integer range)',
+      message: 'Controller ID must be a valid non-negative integer within JavaScript safe integer range'
     });
     return;
   }

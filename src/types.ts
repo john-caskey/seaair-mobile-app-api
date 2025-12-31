@@ -17,7 +17,7 @@ export interface MessageSender {
 export interface Message {
   timestamp: string;
   sender: MessageSender;
-  controllerId: number;
+  controllerId: number; // Non-negative integer within JavaScript safe integer range (0 to 2^53-1)
   protobufPayload: string;
   expiresAt?: number;
 }

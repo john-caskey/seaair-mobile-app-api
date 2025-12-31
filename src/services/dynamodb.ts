@@ -53,7 +53,7 @@ function getDynamoDBClient(): DynamoDBDocumentClient {
  */
 export interface UserDeviceAssociation {
   userId: string;
-  controllerId: number;
+  controllerId: number; // Non-negative integer within JavaScript safe integer range (0 to 2^53-1)
   createdAt?: string;
   updatedAt?: string;
 }
