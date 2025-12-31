@@ -21,7 +21,7 @@ const router = express.Router();
 router.post('/device', verifyJWT, async (req: Request, res: Response): Promise<void> => {
   const { controllerId } = req.body;
   const userId = req.auth?.sub; // Cognito user ID (sub)
-  const ip = req.ip || req.connection?.remoteAddress || 'unknown';
+  const ip = req.ip || req.socket?.remoteAddress || 'unknown';
 
   console.log(`[Config] Device association request from user ${userId} at ${ip} for controller ${controllerId}`);
 
@@ -74,7 +74,7 @@ router.post('/device', verifyJWT, async (req: Request, res: Response): Promise<v
 router.get('/device/:controllerId', verifyJWT, async (req: Request, res: Response): Promise<void> => {
   const { controllerId } = req.params;
   const userId = req.auth?.sub; // Cognito user ID (sub)
-  const ip = req.ip || req.connection?.remoteAddress || 'unknown';
+  const ip = req.ip || req.socket?.remoteAddress || 'unknown';
 
   console.log(`[Config] Device association query from user ${userId} at ${ip} for controller ${controllerId}`);
 
@@ -135,7 +135,7 @@ router.get('/device/:controllerId', verifyJWT, async (req: Request, res: Respons
 router.delete('/device/:controllerId', verifyJWT, async (req: Request, res: Response): Promise<void> => {
   const { controllerId } = req.params;
   const userId = req.auth?.sub; // Cognito user ID (sub)
-  const ip = req.ip || req.connection?.remoteAddress || 'unknown';
+  const ip = req.ip || req.socket?.remoteAddress || 'unknown';
 
   console.log(`[Config] Device dissociation request from user ${userId} at ${ip} for controller ${controllerId}`);
 

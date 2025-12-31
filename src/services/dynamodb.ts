@@ -21,21 +21,28 @@ function getDynamoDBClient(): DynamoDBDocumentClient {
   if (!dynamoDBClient) {
     const awsConfig = getAWSConfig();
     
+    // Check if credentials are provided
+    const hasCredentials = !!(awsConfig.accessKeyId && awsConfig.secretAccessKey);
+    
+    if (hasCredentials) {
+      console.log(`[DynamoDB] Initializing client with provided credentials for region: ${awsConfig.region}`);
+    } else {
+      console.log(`[DynamoDB] Initializing client using default credential provider (IAM role) for region: ${awsConfig.region}`);
+    }
+    
     // Create base DynamoDB client
     const baseClient = new DynamoDBClient({
       region: awsConfig.region,
-      ...(awsConfig.accessKeyId && awsConfig.secretAccessKey && {
+      ...(hasCredentials && {
         credentials: {
-          accessKeyId: awsConfig.accessKeyId,
-          secretAccessKey: awsConfig.secretAccessKey,
+          accessKeyId: awsConfig.accessKeyId!,
+          secretAccessKey: awsConfig.secretAccessKey!,
         },
       }),
     });
 
     // Create document client (simplifies working with DynamoDB)
     dynamoDBClient = DynamoDBDocumentClient.from(baseClient);
-    
-    console.log(`[DynamoDB] Client initialized for region: ${awsConfig.region}`);
   }
   
   return dynamoDBClient;
@@ -78,7 +85,7 @@ export async function storeUserDeviceAssociation(
     await client.send(command);
     console.log(`[DynamoDB] Stored association: user=${userId}, controller=${controllerId}`);
   } catch (error: any) {
-    console.error(`[DynamoDB] Error storing association:`, error);
+    console.error(`[DynamoDB] Error storing association: ${error.name || 'Unknown error'}`);
     throw new Error(`Failed to store user-device association: ${error.message}`);
   }
 }
@@ -121,7 +128,7 @@ export async function getUserDeviceAssociation(
     console.log(`[DynamoDB] Retrieved association: user=${userId}, controller=${controllerId}`);
     return association;
   } catch (error: any) {
-    console.error(`[DynamoDB] Error retrieving association:`, error);
+    console.error(`[DynamoDB] Error retrieving association: ${error.name || 'Unknown error'}`);
     throw new Error(`Failed to retrieve user-device association: ${error.message}`);
   }
 }
@@ -150,7 +157,7 @@ export async function deleteUserDeviceAssociation(
     await client.send(command);
     console.log(`[DynamoDB] Deleted association: user=${userId}, controller=${controllerId}`);
   } catch (error: any) {
-    console.error(`[DynamoDB] Error deleting association:`, error);
+    console.error(`[DynamoDB] Error deleting association: ${error.name || 'Unknown error'}`);
     throw new Error(`Failed to delete user-device association: ${error.message}`);
   }
 }
