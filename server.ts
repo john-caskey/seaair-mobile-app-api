@@ -11,7 +11,7 @@ import controllerRoutes from './src/routes/controller';
 import mobileRoutes from './src/routes/mobile';
 import configRoutes from './src/routes/config';
 import { isCognitoConfigured, COGNITO_USER_POOL_ID, AWS_REGION } from './src/auth';
-import { HealthResponse } from './src/types';
+import { HealthResponse, HealthDetailResponse, QueueContents, Message } from './src/types';
 
 const app: Application = express();
 const PORT = process.env.PORT || 3000;
@@ -60,6 +60,73 @@ app.get('/health', (_req: Request, res: Response): void => {
   res.status(200).json(response);
 });
 
+// Detailed health check endpoint with queue contents
+app.get('/health-detail', (_req: Request, res: Response): void => {
+  const stats = app.locals.messageQueue.getStats();
+  const rateLimiterStats = app.locals.rateLimiter.getStats();
+  const queueData = app.locals.messageQueue.getAllQueueContents();
+  
+  // Convert Maps to plain objects for JSON serialization
+  const queueContents: QueueContents = {
+    mobileAppQueue: {},
+    controllerQueue: {}
+  };
+
+  // Convert mobile app queue Map to object
+  for (const [controllerId, messages] of queueData.mobileAppQueue.entries()) {
+    queueContents.mobileAppQueue[controllerId.toString()] = messages;
+  }
+
+  // Convert controller queue Map to object
+  for (const [controllerId, message] of queueData.controllerQueue.entries()) {
+    queueContents.controllerQueue[controllerId.toString()] = message;
+  }
+
+  // Log queue contents to console
+  console.log('[Server] /health-detail - Dumping queue contents:');
+  console.log('='.repeat(80));
+  console.log('Mobile App Queue (messages from mobile apps to controllers):');
+  console.log('-'.repeat(80));
+  for (const [controllerId, messages] of queueData.mobileAppQueue.entries()) {
+    console.log(`  Controller ID ${controllerId}: ${messages.length} message(s)`);
+    messages.forEach((msg: Message, idx: number) => {
+      console.log(`    Message ${idx + 1}:`);
+      console.log(`      Timestamp: ${msg.timestamp}`);
+      console.log(`      Sender: ${msg.sender.type} from ${msg.sender.ip}${msg.sender.authId ? ` (Auth: ${msg.sender.authId})` : ''}`);
+      console.log(`      Payload: ${msg.protobufPayload.substring(0, 50)}${msg.protobufPayload.length > 50 ? '...' : ''}`);
+      console.log(`      Expires At: ${msg.expiresAt ? new Date(msg.expiresAt).toISOString() : 'N/A'}`);
+    });
+  }
+  
+  console.log('='.repeat(80));
+  console.log('Controller Queue (latest heartbeat from controllers):');
+  console.log('-'.repeat(80));
+  for (const [controllerId, message] of queueData.controllerQueue.entries()) {
+    console.log(`  Controller ID ${controllerId}:`);
+    console.log(`    Timestamp: ${message.timestamp}`);
+    console.log(`    Sender: ${message.sender.type} from ${message.sender.ip}`);
+    console.log(`    Payload: ${message.protobufPayload.substring(0, 50)}${message.protobufPayload.length > 50 ? '...' : ''}`);
+    console.log(`    Expires At: ${message.expiresAt ? new Date(message.expiresAt).toISOString() : 'N/A'}`);
+  }
+  console.log('='.repeat(80));
+
+  const response: HealthDetailResponse = {
+    status: 'healthy',
+    uptime: process.uptime(),
+    timestamp: new Date().toISOString(),
+    queues: stats,
+    queueContents: queueContents,
+    rateLimiter: rateLimiterStats,
+    cognito: {
+      configured: isCognitoConfigured(),
+      userPoolId: COGNITO_USER_POOL_ID || 'not-set',
+      region: AWS_REGION
+    }
+  };
+
+  res.status(200).json(response);
+});
+
 // 404 handler
 app.use((req: Request, res: Response): void => {
   console.log(`[Server] 404 - Route not found: ${req.method} ${req.path}`);
@@ -84,6 +151,7 @@ app.listen(PORT, () => {
   console.log(`[Server] Mobile app routes available at /mobile`);
   console.log(`[Server] Configuration routes available at /config`);
   console.log(`[Server] Health check available at /health`);
+  console.log(`[Server] Detailed health check available at /health-detail`);
 });
 
 export default app;

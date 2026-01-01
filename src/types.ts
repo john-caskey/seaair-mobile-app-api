@@ -68,3 +68,28 @@ export interface HealthResponse {
   rateLimiter: RateLimiterStats;
   cognito: CognitoStatus;
 }
+
+/**
+ * Queue contents for detailed health check
+ */
+export interface QueueContents {
+  mobileAppQueue: {
+    [controllerId: string]: Message[];
+  };
+  controllerQueue: {
+    [controllerId: string]: Message;
+  };
+}
+
+/**
+ * Detailed health check response
+ */
+export interface HealthDetailResponse {
+  status: string;
+  uptime: number;
+  timestamp: string;
+  queues: QueueStats;
+  queueContents: QueueContents;
+  rateLimiter: RateLimiterStats;
+  cognito: CognitoStatus;
+}

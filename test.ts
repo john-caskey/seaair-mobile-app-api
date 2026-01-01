@@ -78,16 +78,27 @@ async function runTests(): Promise<void> {
     assert(typeof health.body.queues === 'object', 'Health includes queue stats');
     console.log('');
 
-    // Test 2: Generate JWT token
-    console.log('Test 2: Generate JWT Token');
+    // Test 2: Detailed health check (empty queues)
+    console.log('Test 2: Detailed Health Check (empty queues)');
+    const healthDetail1 = await makeRequest('GET', '/health-detail');
+    assert(healthDetail1.status === 200, 'Health-detail endpoint returns 200');
+    assert(healthDetail1.body.status === 'healthy', 'Health-detail status is healthy');
+    assert(typeof healthDetail1.body.queues === 'object', 'Health-detail includes queue stats');
+    assert(typeof healthDetail1.body.queueContents === 'object', 'Health-detail includes queue contents');
+    assert(typeof healthDetail1.body.queueContents.mobileAppQueue === 'object', 'Mobile app queue is present');
+    assert(typeof healthDetail1.body.queueContents.controllerQueue === 'object', 'Controller queue is present');
+    console.log('');
+
+    // Test 3: Generate JWT token
+    console.log('Test 3: Generate JWT Token');
     const tokenRes = await makeRequest('POST', '/test/generate-token', { userId: 'test-user-1' });
     assert(tokenRes.status === 200, 'Token generation returns 200');
     assert(tokenRes.body.token, 'Token is present in response');
     const token = tokenRes.body.token;
     console.log('');
 
-    // Test 3: Controller heartbeat
-    console.log('Test 3: Controller Heartbeat');
+    // Test 4: Controller heartbeat
+    console.log('Test 4: Controller Heartbeat');
     const heartbeat = await makeRequest('POST', '/controller/heartbeat', {
       controllerId: 1,
       protobufPayload: 'dGVzdC1oZWFydGJlYXQ='
@@ -97,8 +108,16 @@ async function runTests(): Promise<void> {
     assert(heartbeat.body.controllerId === 1, 'Controller ID matches');
     console.log('');
 
-    // Test 4: Mobile app message without JWT (should fail)
-    console.log('Test 4: Mobile Message Without JWT (should fail)');
+    // Test 5: Detailed health check (with controller heartbeat)
+    console.log('Test 5: Detailed Health Check (with data)');
+    const healthDetail2 = await makeRequest('GET', '/health-detail');
+    assert(healthDetail2.status === 200, 'Health-detail endpoint returns 200');
+    assert(healthDetail2.body.queueContents.controllerQueue['1'], 'Controller 1 heartbeat is in queue');
+    assert(healthDetail2.body.queueContents.controllerQueue['1'].protobufPayload === 'dGVzdC1oZWFydGJlYXQ=', 'Heartbeat payload matches');
+    console.log('');
+
+    // Test 6: Mobile app message without JWT (should fail)
+    console.log('Test 6: Mobile Message Without JWT (should fail)');
     const noAuth = await makeRequest('POST', '/mobile/message', {
       controllerId: 1,
       protobufPayload: 'dGVzdC1tZXNzYWdl'
@@ -107,8 +126,8 @@ async function runTests(): Promise<void> {
     assert(noAuth.body.error, 'Error message is present');
     console.log('');
 
-    // Test 5: Mobile app message with JWT
-    console.log('Test 5: Mobile Message With JWT');
+    // Test 7: Mobile app message with JWT
+    console.log('Test 7: Mobile Message With JWT');
     const mobileMsg = await makeRequest('POST', '/mobile/message', {
       controllerId: 1,
       protobufPayload: 'dGVzdC1tb2JpbGUtbWVzc2FnZQ=='
@@ -119,8 +138,8 @@ async function runTests(): Promise<void> {
     assert(mobileMsg.body.success === true, 'Message queued successfully');
     console.log('');
 
-    // Test 6: Controller retrieves message
-    console.log('Test 6: Controller Retrieves Message');
+    // Test 8: Controller retrieves message
+    console.log('Test 8: Controller Retrieves Message');
     const retrieveMsg = await makeRequest('GET', '/controller/messages/1');
     assert(retrieveMsg.status === 200, 'Message retrieval returns 200');
     assert(retrieveMsg.body.success === true, 'Retrieval is successful');
@@ -128,8 +147,8 @@ async function runTests(): Promise<void> {
     assert(retrieveMsg.body.message.sender.authId === 'test-user-1', 'Sender auth ID matches');
     console.log('');
 
-    // Test 7: Mobile app retrieves controller status
-    console.log('Test 7: Mobile App Retrieves Controller Status');
+    // Test 9: Mobile app retrieves controller status
+    console.log('Test 9: Mobile App Retrieves Controller Status');
     const status = await makeRequest('GET', '/mobile/status/1', null, {
       'Authorization': `Bearer ${token}`
     });
@@ -138,9 +157,9 @@ async function runTests(): Promise<void> {
     assert(status.body.status.protobufPayload === 'dGVzdC1oZWFydGJlYXQ=', 'Status payload matches heartbeat');
     console.log('');
 
-    // Test 8: Rate limiting
-    console.log('Test 8: Rate Limiting (sending 26 requests)');
-    // Note: We've already made 2 requests in previous tests (test 5 and test 7)
+    // Test 10: Rate limiting
+    console.log('Test 10: Rate Limiting (sending 26 requests)');
+    // Note: We've already made 2 requests in previous tests (test 7 and test 9)
     // So we need to account for those when testing the rate limit of 25
     let successCount = 0;
     let rateLimitedCount = 0;
@@ -175,23 +194,23 @@ async function runTests(): Promise<void> {
     assert(rateLimitedCount === 3, `Rate limiter blocks requests 26-28 (got ${rateLimitedCount} blocked)`);
     console.log('');
 
-    // Test 9: Message expiration not triggered (messages should still be there)
-    console.log('Test 9: Messages Are Queued Correctly');
+    // Test 11: Messages Are Queued Correctly
+    console.log('Test 11: Messages Are Queued Correctly');
     const checkHealth = await makeRequest('GET', '/health');
-    // We sent 23 messages in test 8 that succeeded
+    // We sent 23 messages in test 10 that succeeded
     assert(checkHealth.body.queues.mobileAppMessages === 23, `All 23 messages are in queue (got ${checkHealth.body.queues.mobileAppMessages})`);
     console.log('');
 
-    // Test 10: Retrieve messages in FIFO order
-    console.log('Test 10: FIFO Message Retrieval');
+    // Test 12: FIFO Message Retrieval
+    console.log('Test 12: FIFO Message Retrieval');
     const msg1 = await makeRequest('GET', '/controller/messages/2');
     const msg2 = await makeRequest('GET', '/controller/messages/2');
     assert(msg1.body.message.protobufPayload.includes('dGVzdC0'), 'First message retrieved');
     assert(msg2.body.message.protobufPayload.includes('dGVzdC0'), 'Second message retrieved');
     console.log('');
 
-    // Test 11: Missing required fields
-    console.log('Test 11: Validation - Missing Controller ID');
+    // Test 13: Validation - Missing Controller ID
+    console.log('Test 13: Validation - Missing Controller ID');
     const noControllerId = await makeRequest('POST', '/controller/heartbeat', {
       protobufPayload: 'dGVzdA=='
     });
@@ -199,8 +218,8 @@ async function runTests(): Promise<void> {
     assert(noControllerId.body.error.includes('controllerId'), 'Error mentions controllerId');
     console.log('');
 
-    // Test 12: Invalid route
-    console.log('Test 12: 404 for Invalid Route');
+    // Test 14: 404 for Invalid Route
+    console.log('Test 14: 404 for Invalid Route');
     const notFound = await makeRequest('GET', '/invalid-route');
     assert(notFound.status === 404, 'Invalid route returns 404');
     console.log('');
