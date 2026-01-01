@@ -201,6 +201,17 @@ export class MessageQueue {
   }
 
   /**
+   * Get all queue contents for detailed inspection
+   * Returns a snapshot of all messages in both queues
+   */
+  getAllQueueContents(): { mobileAppQueue: Map<number, Message[]>, controllerQueue: Map<number, Message> } {
+    return {
+      mobileAppQueue: new Map(this.mobileAppQueue),
+      controllerQueue: new Map(this.controllerQueue)
+    };
+  }
+
+  /**
    * Stop the cleanup interval (useful for testing)
    */
   destroy(): void {
