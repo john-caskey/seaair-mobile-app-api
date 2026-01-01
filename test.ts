@@ -89,18 +89,18 @@ async function runTests(): Promise<void> {
     // Test 3: Controller heartbeat
     console.log('Test 3: Controller Heartbeat');
     const heartbeat = await makeRequest('POST', '/controller/heartbeat', {
-      controllerId: 'test-controller-1',
+      controllerId: 1,
       protobufPayload: 'dGVzdC1oZWFydGJlYXQ='
     });
     assert(heartbeat.status === 200, 'Heartbeat returns 200');
     assert(heartbeat.body.success === true, 'Heartbeat is successful');
-    assert(heartbeat.body.controllerId === 'test-controller-1', 'Controller ID matches');
+    assert(heartbeat.body.controllerId === 1, 'Controller ID matches');
     console.log('');
 
     // Test 4: Mobile app message without JWT (should fail)
     console.log('Test 4: Mobile Message Without JWT (should fail)');
     const noAuth = await makeRequest('POST', '/mobile/message', {
-      controllerId: 'test-controller-1',
+      controllerId: 1,
       protobufPayload: 'dGVzdC1tZXNzYWdl'
     });
     assert(noAuth.status === 401, 'No JWT returns 401');
@@ -110,7 +110,7 @@ async function runTests(): Promise<void> {
     // Test 5: Mobile app message with JWT
     console.log('Test 5: Mobile Message With JWT');
     const mobileMsg = await makeRequest('POST', '/mobile/message', {
-      controllerId: 'test-controller-1',
+      controllerId: 1,
       protobufPayload: 'dGVzdC1tb2JpbGUtbWVzc2FnZQ=='
     }, {
       'Authorization': `Bearer ${token}`
@@ -121,7 +121,7 @@ async function runTests(): Promise<void> {
 
     // Test 6: Controller retrieves message
     console.log('Test 6: Controller Retrieves Message');
-    const retrieveMsg = await makeRequest('GET', '/controller/messages/test-controller-1');
+    const retrieveMsg = await makeRequest('GET', '/controller/messages/1');
     assert(retrieveMsg.status === 200, 'Message retrieval returns 200');
     assert(retrieveMsg.body.success === true, 'Retrieval is successful');
     assert(retrieveMsg.body.message.protobufPayload === 'dGVzdC1tb2JpbGUtbWVzc2FnZQ==', 'Message payload matches');
@@ -130,7 +130,7 @@ async function runTests(): Promise<void> {
 
     // Test 7: Mobile app retrieves controller status
     console.log('Test 7: Mobile App Retrieves Controller Status');
-    const status = await makeRequest('GET', '/mobile/status/test-controller-1', null, {
+    const status = await makeRequest('GET', '/mobile/status/1', null, {
       'Authorization': `Bearer ${token}`
     });
     assert(status.status === 200, 'Status retrieval returns 200');
@@ -148,7 +148,7 @@ async function runTests(): Promise<void> {
     // Send 23 more requests to reach the limit (2 already sent + 23 = 25)
     for (let i = 0; i < 23; i++) {
       const result = await makeRequest('POST', '/mobile/message', {
-        controllerId: 'test-controller-2',
+        controllerId: 2,
         protobufPayload: `dGVzdC0${i}`
       }, {
         'Authorization': `Bearer ${token}`
@@ -161,7 +161,7 @@ async function runTests(): Promise<void> {
     // These 3 should be rate limited
     for (let i = 23; i < 26; i++) {
       const result = await makeRequest('POST', '/mobile/message', {
-        controllerId: 'test-controller-2',
+        controllerId: 2,
         protobufPayload: `dGVzdC0${i}`
       }, {
         'Authorization': `Bearer ${token}`
@@ -184,8 +184,8 @@ async function runTests(): Promise<void> {
 
     // Test 10: Retrieve messages in FIFO order
     console.log('Test 10: FIFO Message Retrieval');
-    const msg1 = await makeRequest('GET', '/controller/messages/test-controller-2');
-    const msg2 = await makeRequest('GET', '/controller/messages/test-controller-2');
+    const msg1 = await makeRequest('GET', '/controller/messages/2');
+    const msg2 = await makeRequest('GET', '/controller/messages/2');
     assert(msg1.body.message.protobufPayload.includes('dGVzdC0'), 'First message retrieved');
     assert(msg2.body.message.protobufPayload.includes('dGVzdC0'), 'Second message retrieved');
     console.log('');

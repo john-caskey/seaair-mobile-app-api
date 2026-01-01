@@ -56,7 +56,7 @@ Controller sends status updates (heartbeat).
 **Request Body:**
 ```json
 {
-  "controllerId": "string (required)",
+  "controllerId": "number (required, non-negative integer)",
   "protobufPayload": "string (base64 encoded protobuf)"
 }
 ```
@@ -66,12 +66,12 @@ Controller sends status updates (heartbeat).
 {
   "success": true,
   "message": "Heartbeat received",
-  "controllerId": "string"
+  "controllerId": 12345
 }
 ```
 
 #### GET /controller/messages/:controllerId
-Controller retrieves queued messages from mobile app.
+Controller retrieves queued messages from mobile app. The `:controllerId` parameter should be a numeric value.
 
 **Response (when messages available):**
 ```json
@@ -84,7 +84,7 @@ Controller retrieves queued messages from mobile app.
       "type": "mobile",
       "authId": "Cognito auth ID"
     },
-    "controllerId": "string",
+    "controllerId": 12345,
     "protobufPayload": "base64 encoded protobuf"
   }
 }
@@ -111,7 +111,7 @@ Authorization: Bearer <JWT_TOKEN>
 **Request Body:**
 ```json
 {
-  "controllerId": "string (required)",
+  "controllerId": "number (required, non-negative integer)",
   "protobufPayload": "string (base64 encoded protobuf)"
 }
 ```
@@ -121,12 +121,12 @@ Authorization: Bearer <JWT_TOKEN>
 {
   "success": true,
   "message": "Message queued for controller",
-  "controllerId": "string"
+  "controllerId": 12345
 }
 ```
 
 #### GET /mobile/status/:controllerId
-Mobile app retrieves latest controller status.
+Mobile app retrieves latest controller status. The `:controllerId` parameter should be a numeric value.
 
 **Headers:**
 ```
@@ -143,7 +143,7 @@ Authorization: Bearer <JWT_TOKEN>
       "ip": "IP address",
       "type": "controller"
     },
-    "controllerId": "string",
+    "controllerId": 12345,
     "protobufPayload": "base64 encoded protobuf"
   }
 }
@@ -162,7 +162,7 @@ Authorization: Bearer <JWT_TOKEN>
 **Request Body:**
 ```json
 {
-  "controllerId": "string (required)"
+  "controllerId": "number (required, non-negative integer)"
 }
 ```
 
@@ -172,12 +172,12 @@ Authorization: Bearer <JWT_TOKEN>
   "success": true,
   "message": "Device associated successfully",
   "userId": "cognito-user-sub",
-  "controllerId": "string"
+  "controllerId": 12345
 }
 ```
 
 #### GET /config/device/:controllerId
-Retrieve user-device association from DynamoDB.
+Retrieve user-device association from DynamoDB. The `:controllerId` parameter should be a numeric value.
 
 **Headers:**
 ```
@@ -190,7 +190,7 @@ Authorization: Bearer <JWT_TOKEN>
   "success": true,
   "association": {
     "userId": "cognito-user-sub",
-    "controllerId": "string",
+    "controllerId": 12345,
     "createdAt": "ISO 8601 timestamp",
     "updatedAt": "ISO 8601 timestamp"
   }
@@ -206,7 +206,7 @@ Authorization: Bearer <JWT_TOKEN>
 ```
 
 #### DELETE /config/device/:controllerId
-Delete user-device association from DynamoDB.
+Delete user-device association from DynamoDB. The `:controllerId` parameter should be a numeric value.
 
 **Headers:**
 ```
@@ -219,7 +219,7 @@ Authorization: Bearer <JWT_TOKEN>
   "success": true,
   "message": "Device dissociated successfully",
   "userId": "cognito-user-sub",
-  "controllerId": "string"
+  "controllerId": 12345
 }
 ```
 
@@ -338,7 +338,7 @@ The API uses AWS DynamoDB to store durable user-device associations. The table s
 
 - **Table Name**: `seaair-user-device`
 - **Partition Key**: `user-id` (String) - Cognito user sub/ID
-- **Sort Key**: `controller-id` (String) - Controller device ID
+- **Sort Key**: `controller-id` (String) - Controller device ID (stored as string representation of numeric ID)
 - **Attributes**:
   - `createdAt`: ISO 8601 timestamp when association was created
   - `updatedAt`: ISO 8601 timestamp when association was last updated
@@ -356,12 +356,14 @@ The API uses AWS DynamoDB to store durable user-device associations. The table s
 
 The API will automatically use the configured credentials to access DynamoDB.
 
+**Note**: Controller IDs are numeric (uint64_t) in the API but stored as strings in DynamoDB for compatibility.
+
 ## Message Format
 
 All messages include:
 - `timestamp`: ISO 8601 timestamp
 - `sender`: Object with `ip`, `type`, and optionally `authId`
-- `controllerId`: Unique controller identifier
+- `controllerId`: Unique controller identifier (numeric, non-negative integer)
 - `protobufPayload`: Base64 encoded protobuf message
 
 ## Protobuf Definitions

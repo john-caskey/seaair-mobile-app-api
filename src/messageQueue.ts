@@ -8,16 +8,16 @@
 import { Message, QueueStats } from './types';
 
 export class MessageQueue {
-  private mobileAppQueue: Map<string, Message[]>;
-  private controllerQueue: Map<string, Message>;
+  private mobileAppQueue: Map<number, Message[]>;
+  private controllerQueue: Map<number, Message>;
   private cleanupInterval: NodeJS.Timeout;
 
   constructor() {
     // Hashmap for mobile app messages: controllerId -> array of messages
-    this.mobileAppQueue = new Map<string, Message[]>();
+    this.mobileAppQueue = new Map<number, Message[]>();
     
     // Hashmap for controller messages: controllerId -> single message
-    this.controllerQueue = new Map<string, Message>();
+    this.controllerQueue = new Map<number, Message>();
     
     // Start cleanup interval for expired messages
     this.cleanupInterval = this.startCleanup();
@@ -25,10 +25,10 @@ export class MessageQueue {
 
   /**
    * Add a message from mobile app to a controller queue
-   * @param controllerId - Unique controller identifier
+   * @param controllerId - Unique controller identifier (numeric)
    * @param message - Message object with timestamp, sender, auth, protobuf payload
    */
-  addMobileAppMessage(controllerId: string, message: Message): void {
+  addMobileAppMessage(controllerId: number, message: Message): void {
     const messageWithExpiry: Message = {
       ...message,
       expiresAt: Date.now() + (11 * 60 * 1000) // 11 minutes from now
@@ -47,10 +47,10 @@ export class MessageQueue {
 
   /**
    * Add or update controller heartbeat message
-   * @param controllerId - Unique controller identifier
+   * @param controllerId - Unique controller identifier (numeric)
    * @param message - Message object with timestamp, sender, protobuf payload
    */
-  addControllerMessage(controllerId: string, message: Message): void {
+  addControllerMessage(controllerId: number, message: Message): void {
     const messageWithExpiry: Message = {
       ...message,
       expiresAt: Date.now() + (11 * 60 * 1000) // 11 minutes from now
@@ -64,10 +64,10 @@ export class MessageQueue {
 
   /**
    * Retrieve and delete next mobile app message for a controller
-   * @param controllerId - Unique controller identifier
+   * @param controllerId - Unique controller identifier (numeric)
    * @returns Message or null if none available
    */
-  getMobileAppMessage(controllerId: string): Message | null {
+  getMobileAppMessage(controllerId: number): Message | null {
     const queue = this.mobileAppQueue.get(controllerId);
     
     if (!queue || queue.length === 0) {
@@ -96,10 +96,10 @@ export class MessageQueue {
 
   /**
    * Retrieve and delete controller heartbeat message
-   * @param controllerId - Unique controller identifier
+   * @param controllerId - Unique controller identifier (numeric)
    * @returns Message or null if none available
    */
-  getControllerMessage(controllerId: string): Message | null {
+  getControllerMessage(controllerId: number): Message | null {
     const message = this.controllerQueue.get(controllerId);
     
     if (!message) {
@@ -123,7 +123,7 @@ export class MessageQueue {
   /**
    * Clean up expired messages from a specific mobile app queue
    */
-  private cleanupExpiredMessages(controllerId: string, queue: Message[]): void {
+  private cleanupExpiredMessages(controllerId: number, queue: Message[]): void {
     const now = Date.now();
     let removedCount = 0;
 
