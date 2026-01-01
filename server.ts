@@ -11,7 +11,7 @@ import controllerRoutes from './src/routes/controller';
 import mobileRoutes from './src/routes/mobile';
 import configRoutes from './src/routes/config';
 import { isCognitoConfigured, COGNITO_USER_POOL_ID, AWS_REGION } from './src/auth';
-import { HealthResponse, HealthDetailResponse, QueueContents } from './src/types';
+import { HealthResponse, HealthDetailResponse, QueueContents, Message } from './src/types';
 
 const app: Application = express();
 const PORT = process.env.PORT || 3000;
@@ -89,7 +89,7 @@ app.get('/health-detail', (_req: Request, res: Response): void => {
   console.log('-'.repeat(80));
   for (const [controllerId, messages] of queueData.mobileAppQueue.entries()) {
     console.log(`  Controller ID ${controllerId}: ${messages.length} message(s)`);
-    messages.forEach((msg, idx) => {
+    messages.forEach((msg: Message, idx: number) => {
       console.log(`    Message ${idx + 1}:`);
       console.log(`      Timestamp: ${msg.timestamp}`);
       console.log(`      Sender: ${msg.sender.type} from ${msg.sender.ip}${msg.sender.authId ? ` (Auth: ${msg.sender.authId})` : ''}`);
