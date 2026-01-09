@@ -95,7 +95,7 @@ export class MessageQueue {
   }
 
   /**
-   * Retrieve and delete controller heartbeat message
+   * Retrieve controller heartbeat message (does not delete)
    * @param controllerId - Unique controller identifier (numeric)
    * @returns Message or null if none available
    */
@@ -112,10 +112,8 @@ export class MessageQueue {
       return null;
     }
 
-    // Remove message after successful retrieval
-    this.controllerQueue.delete(controllerId);
-    
-    console.log(`[MessageQueue] Retrieved and deleted controller message for controller ${controllerId}`);
+    // Return message without deleting - allows multiple devices to read the latest status
+    console.log(`[MessageQueue] Retrieved controller message for controller ${controllerId} (not deleted)`);
     
     return message;
   }
