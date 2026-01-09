@@ -263,7 +263,7 @@ Health check endpoint with queue statistics and Cognito configuration status.
 - Hashmap structure: `controllerId -> single message`
 - Only stores the latest heartbeat message
 - Messages expire after 11 minutes
-- Messages are deleted after retrieval
+- Messages are NOT deleted after retrieval (allows multiple devices to read the latest status)
 
 ## Rate Limiting
 
