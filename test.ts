@@ -224,6 +224,34 @@ async function runTests(): Promise<void> {
     assert(notFound.status === 404, 'Invalid route returns 404');
     console.log('');
 
+    // Test 15: 200 for Empty Message Queue (No Data)
+    console.log('Test 15: 200 for Empty Message Queue (No Data)');
+    const emptyMessages = await makeRequest('GET', '/controller/messages/999');
+    assert(emptyMessages.status === 200, 'Empty message queue returns 200');
+    assert(emptyMessages.body.success === true, 'Response indicates success');
+    assert(emptyMessages.body.message === null, 'Message is null when queue is empty');
+    console.log('');
+
+    // Test 16: 200 for No Controller Status (No Data)
+    console.log('Test 16: 200 for No Controller Status (No Data)');
+    const emptyStatus = await makeRequest('GET', '/mobile/status/999', null, {
+      'Authorization': `Bearer ${token}`
+    });
+    assert(emptyStatus.status === 200, 'No controller status returns 200');
+    assert(emptyStatus.body.success === true, 'Response indicates success');
+    assert(emptyStatus.body.status === null, 'Status is null when no status available');
+    console.log('');
+
+    // Test 17: 200 for No Device Association (No Data)
+    console.log('Test 17: 200 for No Device Association (No Data)');
+    const emptyAssociation = await makeRequest('GET', '/config/device/999', null, {
+      'Authorization': `Bearer ${token}`
+    });
+    assert(emptyAssociation.status === 200, 'No device association returns 200');
+    assert(emptyAssociation.body.success === true, 'Response indicates success');
+    assert(emptyAssociation.body.association === null, 'Association is null when not found');
+    console.log('');
+
   } catch (error) {
     console.error('Test error:', error);
     failCount++;

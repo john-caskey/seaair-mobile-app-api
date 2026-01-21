@@ -95,9 +95,9 @@ router.get('/messages/:controllerId', (req: Request, res: Response): void => {
 
   if (!message) {
     console.log(`[Controller] No messages available for controller ${controllerId}`);
-    res.status(404).json({ 
-      success: false,
-      message: 'No messages available'
+    res.status(200).json({ 
+      success: true,
+      message: null
     });
     return;
   }
