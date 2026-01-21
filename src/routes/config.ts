@@ -162,9 +162,9 @@ router.get('/device/:controllerId', verifyJWT, async (req: Request, res: Respons
 
     if (!association) {
       console.log(`[Config] No association found for controller ${controllerId} and user ${userId}`);
-      res.status(404).json({ 
-        success: false,
-        message: 'No device association found'
+      res.status(200).json({ 
+        success: true,
+        association: null
       });
       return;
     }

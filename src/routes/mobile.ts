@@ -152,9 +152,9 @@ router.get('/status/:controllerId', verifyJWT, (req: Request, res: Response): vo
 
   if (!message) {
     console.log(`[Mobile] No status available for controller ${controllerId}`);
-    res.status(404).json({ 
-      success: false,
-      message: 'No status available for this controller'
+    res.status(200).json({ 
+      success: true,
+      status: null
     });
     return;
   }
