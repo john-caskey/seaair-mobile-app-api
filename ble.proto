@@ -55,6 +55,7 @@ message DeviceInfoResponse {
     uint32        remain  = 1; // Remain number of device will response
     BM.DeviceType type    = 2; // Device type
     BM.Mac        Mac     = 3; // Device Mac address
+    int32         bleRssi = 4; // Bluetooth signal strength in dBm. Typical ranges: Poor (< -80 dBm), Fair (-80 to -60 dBm), Good (>= -60 dBm)
     bool          online  = 5; // Device status
     Result        result  = 6;
 

@@ -87,7 +87,7 @@ message Controller2Utility {
 message WiFi {
     string ssid   = 1; // WiFi Name
     Mac    mac    = 2; // Mac address
-    int32 rssi   = 3; // Signal strength
+    int32 rssi   = 3; // Signal strength in dBm. Typical ranges: Poor (< -70 dBm), Fair (-70 to -50 dBm), Good (>= -50 dBm)
     Ip     ip     = 4; // IP address
     Status status = 5;
 
