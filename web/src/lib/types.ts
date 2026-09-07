@@ -68,7 +68,8 @@ export interface DeviceSummary {
 }
 
 export interface DeviceListResponse {
-  windowMs: number;
+  /** Null when the list was requested with window=all (no recency cutoff). */
+  windowMs: number | null;
   count: number;
   devices: DeviceSummary[];
 }

@@ -1,12 +1,17 @@
-import { FormEvent } from 'react';
-import type { PayloadFilter } from '../lib/types';
+import { FormEvent, KeyboardEvent, useMemo, useState } from 'react';
+import type { DeviceSummary, PayloadFilter } from '../lib/types';
+
+const MAX_SUGGESTIONS = 8;
 
 interface Props {
   controllerId: number | null;
   onControllerIdChange: (id: number | null) => void;
-  // Live text in the controller-identifier input. Lifted to the parent so
-  // the device list can filter as the user types, while submit (Enter or
-  // the Search button) still navigates straight to the typed controller.
+  // Every known device (window=all), for name/id autocomplete. May be empty
+  // while the list is still loading.
+  suggestions: DeviceSummary[];
+  // Live text in the search input. Lifted to the parent so the device list
+  // can filter as the user types, while submit (Enter or the Search button)
+  // still navigates straight to the matched controller.
   searchText: string;
   onSearchTextChange: (text: string) => void;
   filters: PayloadFilter[];
@@ -16,14 +21,15 @@ interface Props {
 }
 
 // Search bar with two affordances:
-//   1. Controller-identifier lookup that doubles as a live filter on the
-//      device list (the primary use case per the spec).
+//   1. Name / controller-identifier lookup with autocomplete that doubles as
+//      a live filter on the device list (the primary use case per the spec).
 //   2. Stacked decoded-payload filters using the same `path[=op]:value`
 //      grammar as the backend's parseFilterParam, so what you type here
 //      maps 1:1 to backend filtering on the per-device history view.
 export function SearchBar({
   controllerId,
   onControllerIdChange,
+  suggestions,
   searchText,
   onSearchTextChange,
   filters,
@@ -31,10 +37,58 @@ export function SearchBar({
   filterText,
   onFilterTextChange,
 }: Props): JSX.Element {
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [highlight, setHighlight] = useState(-1);
+
+  const matches = useMemo(() => {
+    const trimmed = searchText.trim();
+    if (!trimmed) return [];
+    const q = trimmed.toLowerCase();
+    return suggestions
+      .filter(
+        (d) =>
+          (d.name ?? '').toLowerCase().includes(q) ||
+          String(d.controllerId).startsWith(trimmed)
+      )
+      .slice(0, MAX_SUGGESTIONS);
+  }, [suggestions, searchText]);
+
+  function pick(d: DeviceSummary): void {
+    onSearchTextChange(d.name ?? String(d.controllerId));
+    onControllerIdChange(d.controllerId);
+    setDropdownOpen(false);
+    setHighlight(-1);
+  }
+
   function submit(e: FormEvent<HTMLFormElement>): void {
     e.preventDefault();
+    setDropdownOpen(false);
+    if (highlight >= 0 && highlight < matches.length) {
+      pick(matches[highlight]);
+      return;
+    }
     const parsed = parseInt(searchText, 10);
-    onControllerIdChange(Number.isFinite(parsed) && parsed > 0 ? parsed : null);
+    if (Number.isFinite(parsed) && parsed > 0) {
+      onControllerIdChange(parsed);
+    } else if (matches.length > 0) {
+      pick(matches[0]);
+    } else if (!searchText.trim()) {
+      onControllerIdChange(null);
+    }
+  }
+
+  function searchKeyDown(e: KeyboardEvent<HTMLInputElement>): void {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setDropdownOpen(true);
+      setHighlight((h) => Math.min(h + 1, matches.length - 1));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setHighlight((h) => Math.max(h - 1, -1));
+    } else if (e.key === 'Escape') {
+      setDropdownOpen(false);
+      setHighlight(-1);
+    }
   }
 
   function addFilter(): void {
@@ -54,15 +108,63 @@ export function SearchBar({
         <label className="text-sm text-ink-600" htmlFor="controller-search">
           Controller
         </label>
-        <input
-          id="controller-search"
-          type="text"
-          inputMode="numeric"
-          placeholder="Search by controller identifier (e.g. 1042)"
-          value={searchText}
-          onChange={(e) => onSearchTextChange(e.target.value)}
-          className="flex-1 min-w-[160px] w-full sm:w-auto sm:max-w-[320px] px-3 py-1.5 border border-ink-200 rounded text-sm font-mono"
-        />
+        <div className="relative flex-1 min-w-[160px] w-full sm:w-auto sm:max-w-[320px]">
+          <input
+            id="controller-search"
+            type="text"
+            autoComplete="off"
+            placeholder="Search by name or identifier (e.g. Cabin Air, 1042)"
+            value={searchText}
+            onChange={(e) => {
+              onSearchTextChange(e.target.value);
+              setDropdownOpen(true);
+              setHighlight(-1);
+            }}
+            onFocus={() => setDropdownOpen(true)}
+            onBlur={() => {
+              // Delay so a mousedown on a suggestion wins over the blur.
+              setTimeout(() => setDropdownOpen(false), 150);
+            }}
+            onKeyDown={searchKeyDown}
+            className="w-full px-3 py-1.5 border border-ink-200 rounded text-sm"
+            role="combobox"
+            aria-expanded={dropdownOpen && matches.length > 0}
+            aria-controls="controller-search-suggestions"
+            aria-autocomplete="list"
+          />
+          {dropdownOpen && matches.length > 0 && (
+            <ul
+              id="controller-search-suggestions"
+              role="listbox"
+              className="absolute left-0 right-0 top-full mt-1 bg-white border border-ink-200 rounded shadow-lg z-20 overflow-hidden"
+            >
+              {matches.map((d, i) => (
+                <li key={d.controllerId} role="option" aria-selected={i === highlight}>
+                  <button
+                    type="button"
+                    // mousedown, not click: fires before the input's blur
+                    // closes the dropdown.
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      pick(d);
+                    }}
+                    onMouseEnter={() => setHighlight(i)}
+                    className={`w-full text-left px-3 py-1.5 text-sm flex items-center gap-2 ${
+                      i === highlight ? 'bg-ink-100' : ''
+                    }`}
+                  >
+                    <span className="truncate">
+                      {d.name ?? `Controller #${d.controllerId}`}
+                    </span>
+                    <span className="ml-auto font-mono text-xs text-ink-400 shrink-0">
+                      #{d.controllerId}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
         <button
           type="submit"
           className="px-3 py-1.5 bg-ink-800 text-white rounded text-sm"

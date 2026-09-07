@@ -118,8 +118,12 @@ router.get('/devices', async (req: Request, res: Response): Promise<void> => {
     brokerError(res);
     return;
   }
-  const windowMs = parseWindow((req.query.window as string) || '1m');
-  const cutoff = Date.now() - windowMs;
+  const windowStr = (req.query.window as string) || '1m';
+  // window=all disables the recency cutoff: every controller with any stored
+  // heartbeat is listed (backs the dashboard's "All" tab). windowMs is null
+  // in the response so clients can tell the two modes apart.
+  const windowMs = windowStr === 'all' ? null : parseWindow(windowStr);
+  const cutoff = windowMs === null ? 0 : Date.now() - windowMs;
 
   try {
     // Pull stream keys + active beacons in parallel; both are needed before

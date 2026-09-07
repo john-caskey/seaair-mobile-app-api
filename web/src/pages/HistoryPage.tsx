@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useFirehose } from '../hooks/useFirehose';
+import { useDeviceList } from '../hooks/useDeviceList';
 import { SearchBar } from '../components/SearchBar';
 import { DirectionBadge } from '../components/DirectionBadge';
 import { Spinner } from '../components/Spinner';
@@ -25,6 +26,9 @@ export function HistoryPage(): JSX.Element {
   const [filterText, setFilterText] = useState('');
 
   const { data, isLoading, error, isFetching } = useFirehose(FIREHOSE_LIMIT);
+  // Every known device, polled slowly — feeds the search autocomplete so a
+  // controller can be looked up by name here too.
+  const { data: allDevices } = useDeviceList('all', 30_000);
 
   const filteredEntries = useMemo(() => {
     if (!data) return [];
@@ -49,6 +53,7 @@ export function HistoryPage(): JSX.Element {
         onControllerIdChange={(id) => {
           if (id) navigate(`/devices/${id}`);
         }}
+        suggestions={allDevices?.devices ?? []}
         searchText={searchText}
         onSearchTextChange={(t) => {
           setSearchText(t);
