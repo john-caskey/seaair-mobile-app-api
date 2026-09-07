@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useDeviceList } from '../hooks/useDeviceList';
 import { SearchBar } from '../components/SearchBar';
@@ -9,7 +9,12 @@ import type { DeviceSummary, PayloadFilter } from '../lib/types';
 import { DeviceDetail } from './DeviceDetail';
 
 const PAGE_SIZE = 50;
-const WINDOW = '1m';
+// Active window is 1h, not the 1m heartbeat cadence: a single missed
+// heartbeat used to drop a machine off the list, which read as flapping.
+// The per-row status dot still distinguishes live vs stale within the hour.
+const WINDOW = '1h';
+
+export type DeviceListTab = 'active' | 'all';
 
 // Two-column layout: rolled-up device list on the left (one row per
 // controller seen in the active window, beacon-active devices floated to
@@ -25,6 +30,12 @@ export function DevicesPage(): JSX.Element {
   const [filterText, setFilterText] = useState('');
   const [searchText, setSearchText] = useState('');
   const [page, setPage] = useState(0);
+  const [tab, setTab] = useState<DeviceListTab>('active');
+
+  // Every device ever seen, polled slowly — feeds the search autocomplete so
+  // a machine can be looked up by name even when it isn't currently active.
+  // Shares the react-query cache with the list itself when the All tab is up.
+  const { data: allDevices } = useDeviceList('all', 30_000);
 
   return (
     <div className="h-full flex flex-col">
@@ -33,6 +44,7 @@ export function DevicesPage(): JSX.Element {
         onControllerIdChange={(id) =>
           navigate(id ? `/devices/${id}` : '/devices')
         }
+        suggestions={allDevices?.devices ?? []}
         searchText={searchText}
         onSearchTextChange={(t) => {
           setSearchText(t);
@@ -51,6 +63,11 @@ export function DevicesPage(): JSX.Element {
           <DeviceListColumn
             activeControllerId={controllerId}
             searchText={searchText}
+            tab={tab}
+            onTabChange={(t) => {
+              setTab(t);
+              setPage(0);
+            }}
             page={page}
             onPageChange={setPage}
             onSelect={(id) => navigate(`/devices/${id}`)}
@@ -78,17 +95,23 @@ export function DevicesPage(): JSX.Element {
 function DeviceListColumn({
   activeControllerId,
   searchText,
+  tab,
+  onTabChange,
   page,
   onPageChange,
   onSelect,
 }: {
   activeControllerId: number | null;
   searchText: string;
+  tab: DeviceListTab;
+  onTabChange: (t: DeviceListTab) => void;
   page: number;
   onPageChange: (p: number) => void;
   onSelect: (id: number) => void;
 }): JSX.Element {
-  const { data, isLoading, error, isFetching } = useDeviceList(WINDOW);
+  const { data, isLoading, error, isFetching } = useDeviceList(
+    tab === 'all' ? 'all' : WINDOW
+  );
 
   // Stable client-side sort: beacon-active first, then by controllerId
   // ascending. This decouples the visible order from the per-device
@@ -107,7 +130,12 @@ function DeviceListColumn({
     });
     const trimmed = searchText.trim();
     if (!trimmed) return sorted;
-    return sorted.filter((d) => String(d.controllerId).includes(trimmed));
+    const q = trimmed.toLowerCase();
+    return sorted.filter(
+      (d) =>
+        String(d.controllerId).includes(trimmed) ||
+        (d.name ?? '').toLowerCase().includes(q)
+    );
   }, [data, searchText]);
 
   const pageCount = Math.max(1, Math.ceil(filteredDevices.length / PAGE_SIZE));
@@ -116,21 +144,37 @@ function DeviceListColumn({
     safePage * PAGE_SIZE,
     safePage * PAGE_SIZE + PAGE_SIZE
   );
-  const windowLabel = data ? formatWindow(data.windowMs) : '…';
+  const windowLabel =
+    data && data.windowMs !== null ? formatWindow(data.windowMs) : '…';
 
   return (
     <div className="h-full overflow-y-auto flex flex-col">
-      <div className="px-4 py-2 text-xs text-ink-500 flex items-center justify-between border-b border-ink-200 sticky top-0 bg-white z-10">
-        <span>
-          Devices active in the last {windowLabel}
-          {data &&
-            ` (showing ${filteredDevices.length}${
-              filteredDevices.length !== data.devices.length
-                ? ` of ${data.devices.length}`
-                : ''
-            })`}
-        </span>
-        {isFetching && <Spinner />}
+      <div className="border-b border-ink-200 sticky top-0 bg-white z-10">
+        <div className="flex" role="tablist" aria-label="Device list scope">
+          <TabButton
+            selected={tab === 'active'}
+            onClick={() => onTabChange('active')}
+          >
+            Active
+          </TabButton>
+          <TabButton selected={tab === 'all'} onClick={() => onTabChange('all')}>
+            All
+          </TabButton>
+        </div>
+        <div className="px-4 py-2 text-xs text-ink-500 flex items-center justify-between border-t border-ink-100">
+          <span>
+            {tab === 'all'
+              ? 'All devices ever seen'
+              : `Devices active in the last ${windowLabel}`}
+            {data &&
+              ` (showing ${filteredDevices.length}${
+                filteredDevices.length !== data.devices.length
+                  ? ` of ${data.devices.length}`
+                  : ''
+              })`}
+          </span>
+          {isFetching && <Spinner />}
+        </div>
       </div>
       {isLoading && (
         <div className="p-4">
@@ -156,6 +200,8 @@ function DeviceListColumn({
             <li className="p-4 text-ink-500 text-sm">
               {searchText.trim()
                 ? `No devices match "${searchText}".`
+                : tab === 'all'
+                ? 'No devices have ever reported.'
                 : `No devices have reported in the last ${windowLabel}.`}
             </li>
           )}
@@ -185,6 +231,32 @@ function DeviceListColumn({
         </div>
       )}
     </div>
+  );
+}
+
+function TabButton({
+  selected,
+  onClick,
+  children,
+}: {
+  selected: boolean;
+  onClick: () => void;
+  children: ReactNode;
+}): JSX.Element {
+  return (
+    <button
+      type="button"
+      role="tab"
+      aria-selected={selected}
+      onClick={onClick}
+      className={`flex-1 px-4 py-2 text-sm border-b-2 transition-colors ${
+        selected
+          ? 'border-ink-800 text-ink-900 font-medium'
+          : 'border-transparent text-ink-500 hover:text-ink-800'
+      }`}
+    >
+      {children}
+    </button>
   );
 }
 

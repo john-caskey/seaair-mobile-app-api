@@ -141,6 +141,17 @@ describe('GET /dashboard/api/devices', () => {
     expect(res.body.devices.find((d: any) => d.controllerId === 303)).toBeUndefined();
   });
 
+  it('window=all lists every device regardless of age', async () => {
+    mountDevices();
+    const res = await request(app).get('/dashboard/api/devices').query({ window: 'all' });
+    expect(res.status).toBe(200);
+    expect(res.body.count).toBe(4);
+    // windowMs is null so clients can tell the uncapped mode apart.
+    expect(res.body.windowMs).toBeNull();
+    const dev303 = res.body.devices.find((d: any) => d.controllerId === 303);
+    expect(dev303.name).toBe('Old Device');
+  });
+
   it('includes older devices when the window is widened', async () => {
     mountDevices();
     const res = await request(app).get('/dashboard/api/devices').query({ window: '10m' });
